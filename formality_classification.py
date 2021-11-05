@@ -312,6 +312,38 @@ def find_group(suffixes):
     # return empty string if no match
     return ''
 
+def identify(verb):
+    # handle copula
+    if verb == 'で す':
+        if out_format == 'informal':
+            return '' # delete
+        else:
+            return verb # nothing changed
+    if verb == 'だ':
+        if out_format == 'polite':
+            return 'で す' # convert da to desu
+        else:
+            return verb # nothing changed
+    # TODO: need more sophisticated handling of noun/na-adjectives
+    # identify each verb
+    for conj_map_index, map_keys in enumerate(maps):
+        conj_map = maps[map_keys]['conj']
+        pieces = verb.split()
+        stem = pieces[0]
+        logging.debug('stem = [' + stem + ']')
+        suffixes = ' '.join(pieces[1:])
+        logging.debug('suffixes = [' + suffixes + ']')
+        # identify group based on suffixes
+        group = find_group(suffixes)
+        logging.debug('Verb in group: [' + group + ']')
+        if (stem, group) in pattern_map:
+            pattern = pattern_map[(stem, group)]
+            logging.debug('Identified as pattern: [' + pattern + ']')
+            if pattern in conj_map and suffixes in conj_map[pattern]:
+                logging.debug('Identified in group: [' + str(conj_map_index) + ']')
+                return conj_map_index
+    return -1
+
 def convert(verb):
     # handle copula
     if verb == 'で す':
@@ -325,7 +357,7 @@ def convert(verb):
         else:
             return verb # nothing changed
     # TODO: need more sophisticated handling of noun/na-adjectives
-    # convert main verb
+    # convert each verb
     conj_map = to_polite_conj_map
     if out_format == 'informal':
         conj_map = to_informal_conj_map
@@ -352,24 +384,31 @@ def convert(verb):
 def search(tokens, tags):
     logging.debug('Tokens: [' + tokens + ']')
     logging.debug('Tags: [' + tags + ']')
-    verb  = []
+    verb = []
+    verbs = []
     tokens = tokens.strip().split()
     tags = tags.strip().split()
+    verb_end = False
     for i in range(len(tokens) - 1, -1, -1):
         logging.debug('tokens[' + str(i) + ']: [' + tokens[i] + ']')
         logging.debug('tags[' + str(i) + ']: [' + tags[i] + ']')
         if tokens[i] in copula and tags[i] == auxv_tag:
             verb.append(tokens[i])
-            break
+            verb_end = True
         elif tags[i] == verb_tag:
             verb.append(tokens[i])
-            break
+            verb_end = True
         elif tags[i] in tails:
             verb.append(tokens[i])
         else:
             pass
-    verb.reverse()
-    return ' '.join(verb)
+        if verb_end:
+            verb.reverse()
+            verb = ' '.join(verb)
+            verbs.append(verb)
+            verb_end = False
+            verb = []
+    return verbs
 
 def separate(s):
     tokens = []
@@ -399,6 +438,7 @@ def separate(s):
 # A confidence estimation is provided by computing the ratio of the edit distance from different formality domains.
 
 def process(line):
+    result = [0 for key in maps.keys()]
     # handle escaping of space, slash, backslash
     line = line.replace('\\ /补助记号/UNK', '') # remove spaces
     line = line.replace('\\/', '/') # undo escaping of slash
@@ -408,22 +448,23 @@ def process(line):
     # separate line into token, tag, reading triples
     tokens, tags, readings = separate(line)
     # search for main verb in tokens
-    verb = search(tokens, tags)
-    if verb:
-        logging.debug('Found main verb: [' + verb + ']')
+    verbs = search(tokens, tags)
+    for verb in verbs:
+        logging.debug('Found verb: [' + verb + ']')
         # convert conjugation of main verb
-        ans = convert(verb)
-        if ans != verb:
-            logging.debug('Converted [' + verb + '] to [' + ans + ']')
-            # replace verb in tokens
-            tokens = tokens.replace(verb, ans)
-    return tokens
+        ans = identify(verb)
+        if ans > -1:
+            result[ans] += 1
+    
+    result = [x / float(sum(result)) for x in result]
+
+    return result[1]
 
 logging.getLogger().setLevel(logging.DEBUG)
 mk = Mykytea.Mykytea("-deftag UNKNOWN!!")
 load_pattern_map()
 
-s = "トマトを半分に切った。"
+s = "トマトを半分に切った，トマトを半分に切りました，トマトを半分に切りました。"
 
 tags = mk.getTagsToString(s)
 print(tags)
