@@ -4,6 +4,8 @@ import logging
 import re
 import Mykytea
 import os
+import random
+from tqdm import tqdm
 
 # informal -> polite example
 # input (informal):
@@ -458,23 +460,37 @@ def process(line):
 
     return result[1]
 
-# logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.CRITICAL)
 mk = Mykytea.Mykytea("-deftag UNKNOWN!!")
 load_pattern_map()
 
-# data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/jaen-law/txt/law-corpus.ja"), "r")
-# for n, line in enumerate(data_file):
-#     if n > 100:
-#         break
+formal_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/formal.txt"), "a")
+informal_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/informal.txt"), "a")
+combined_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/combined_with_label.txt"), "a")
 
+data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/jaen-law/txt/law-corpus.ja"), "r")
 # s = "トマトを半分に切った，トマトを半分に切りました，トマトを半分に切りました。"
-s = "パッケージは本国行きだ。"
+# s = "パッケージは本国行きだ。"
+total_processed = 0
+for n, s in enumerate(data_file):
+    if random.random() > .9:
+        tags = mk.getTagsToString(s)
 
-tags = mk.getTagsToString(s)
-print(tags)
+        processed = process(tags)
+    else:
+        processed = .5
+    total_processed += processed
+    if n % 1000 == 999:
+        print(n + 1, total_processed / (n + 1))
+    
 
-processed = process(tags)
-if processed != .5:
-    print(s)
-print(processed)
-
+print("Total likelihood is ", total_processed / (n + 1))
+data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/jaen-law/txt/law-corpus.ja"), "r")
+if total_processed / (n + 1) < .5:
+    print("Document is informal.")
+    for line in tqdm(data_file, total = n + 1):
+        informal_file.write(line)
+else:
+    print("Document is formal.")
+    for line in tqdm(data_file, total = n + 1):
+        formal_file.write(line)
