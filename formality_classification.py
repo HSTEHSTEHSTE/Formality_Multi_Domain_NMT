@@ -3,6 +3,7 @@ import argparse
 import logging
 import re
 import Mykytea
+import os
 
 # informal -> polite example
 # input (informal):
@@ -275,7 +276,7 @@ maps = {
 
 def load_pattern_map():
     # load dictionary file into memory
-    for line in open('verb_dict.txt'):
+    for line in open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'verb_dict.txt')):
         pattern, tokens = line.strip().split('\t')
         group = '1'
         if len(pattern) > 2:
@@ -315,15 +316,9 @@ def find_group(suffixes):
 def identify(verb):
     # handle copula
     if verb == 'で す':
-        if out_format == 'informal':
-            return '' # delete
-        else:
-            return verb # nothing changed
+        return 1
     if verb == 'だ':
-        if out_format == 'polite':
-            return 'で す' # convert da to desu
-        else:
-            return verb # nothing changed
+        return 0
     # TODO: need more sophisticated handling of noun/na-adjectives
     # identify each verb
     for conj_map_index, map_keys in enumerate(maps):
@@ -456,19 +451,30 @@ def process(line):
         if ans > -1:
             result[ans] += 1
     
-    result = [x / float(sum(result)) for x in result]
+    if sum(result) == 0:
+        result = [.5, .5]
+    else:
+        result = [x / float(sum(result)) for x in result]
 
     return result[1]
 
-logging.getLogger().setLevel(logging.DEBUG)
+# logging.getLogger().setLevel(logging.DEBUG)
 mk = Mykytea.Mykytea("-deftag UNKNOWN!!")
 load_pattern_map()
 
-s = "トマトを半分に切った，トマトを半分に切りました，トマトを半分に切りました。"
+# data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/jaen-law/txt/law-corpus.ja"), "r")
+# for n, line in enumerate(data_file):
+#     if n > 100:
+#         break
+
+# s = "トマトを半分に切った，トマトを半分に切りました，トマトを半分に切りました。"
+s = "パッケージは本国行きだ。"
 
 tags = mk.getTagsToString(s)
 print(tags)
 
 processed = process(tags)
+if processed != .5:
+    print(s)
 print(processed)
 
