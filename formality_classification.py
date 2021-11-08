@@ -325,8 +325,12 @@ def find_group(suffixes):
 def identify(verb):
     # handle copula
     if verb == 'で す':
+        logging.debug('Identified copula from group: [' + str(1) + ']')
+        logging.debug('Identified in group: [' + str(1) + ']')
         return 1
     if verb == 'だ':
+        logging.debug('Identified copula from group: [' + str(0) + ']')
+        logging.debug('Identified in group: [' + str(0) + ']')
         return 0
     # TODO: need more sophisticated handling of noun/na-adjectives
     # identify each verb

@@ -110,17 +110,23 @@ One of the earliest roadblocks we faced is the scarcity of such sentence-formali
 
 \subsubsection{Procedural Generation of Politeness Labels}
 
-Fortunately for us, this is a topic that had been studied previously by Feely et al. \cite{Feely:19}. In their case, Japanese was the destination language; the task was to generate Japanese sentences that would match the formality levels of the input. The authors identified verb suffixes as the key for indentifying sentence formality, with short-form corresponding to informal sentences and long-form corresponding to formal ones. They published a conversion script which would identify and convert any informal verb suffixes into formal verb suffixes, and vice versa.
+Fortunately for us, this is a topic that had been studied previously by Feely et al. \cite{Feely:19}. In their case, Japanese was the destination language; the task was to generate Japanese sentences that would match the formality levels of the input. The authors identified verb suffixes and copulas as the keys for indentifying sentence formality, with short-form corresponding to informal sentences and long-form corresponding to formal ones. They published a conversion script which would identify and convert any informal verb suffixes into formal verb suffixes, and vice versa.
 
-We start from their script and make two important modifications. First we adapt their conversion script into a classificaiton script. Next, we observe that while long-short verb form is generally a good identifier for sentence formality, there are also situations where a verb can be grammatically constrained to being short-form despite being used in a formal context. Analysing the grammar of a Japanese sentence is rather difficult and is something we would avoid to do; as such, we infer that a sentence that has any long-form verb is always formal whereas a sentence with short-form verbs may still be either formal or informal, with the probability of the sentence being informal increasing with the number of short-form verbs in the sentence.
+We start from their script and make two important modifications. First we adapt their conversion script into a classificaiton script. Next, we observe that while long-short verb form is generally a good identifier for sentence formality, there are also situations where a verb can be grammatically constrained to being short-form despite being used in a formal context. Analysing the grammar of a Japanese sentence is rather difficult and is something we would avoid to do; as such, we infer that a sentence that has any long-form verb is always formal whereas a sentence with short-form verbs may still be either formal or informal, with the probability of the sentence being informal increasing with the number of short-form verbs in the sentence (that relation need not be linear). 
 
 We also take advantage of the fact that the formality level in a single document should remain the same. This observation can serve multiple purposes:
 
 \begin{enumerate}[label=\arabic*]
     \item A sanity check for the outputs of our script;
-    \item A tool to tune our priors for formality classes;
+    \item A tool to tune our priors for formality classes: specifically, the formality label that we assign to sentences with no long-form words;
     \item Simplify our calculation for classifying sentences that had been segmented into documents.
 \end{enumerate}
+
+For $2$, formally, we are interested in minimising the cross-entropy loss between true (document-level) formality labels and inferred formality labels from the number of long and short term verbs in the sentences:
+
+$min(-\sum_{s}^{S}{lab(s) \cdot \log{(f(s))}})$
+
+Where $s$ denote some sentence in the set of all pssible sentences $S$ (or a sample of it, as represented by our corpus); $lab(s)$ denotes the true (document-level) formality label for sentence $s$; and $f(s)$ being the formality label generation function we come up with, which can be further be broken down into some function $g(n_s, n_l, l)$ which takes the count of short and long form verbs in the sentence $n_s$ and $n_l$, as well as the sentence length $l$, as input.
 
 \subsubsection{Using Pre-trained Japanese Language Model for Politeness Labelling}
 
