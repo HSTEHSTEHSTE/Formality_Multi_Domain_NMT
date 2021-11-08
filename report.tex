@@ -130,7 +130,11 @@ Where $s$ denote some sentence in the set of all pssible sentences $S$ (or a sam
 
 \subsubsection{Using Pre-trained Japanese Language Model for Politeness Labelling}
 
+While Japanese is not nearly as high-resource as English (GPT-3 was never specifically trained on Japanese, for example), there are nevertheless some available pre-trained Japanese language models that are available. One of the best recent models that were developed is the Japanese BERT trained at Tohoku University. Similar to the original BERT, this model performs a mask-filling task on Japanese sentences. 
 
+The obvious way of making use of a pre-trained language model for politeness labelling would be to fine-tuned it on the new task. However, that would require correctly labelled data, leading us to a chicken-and-egg problem. Alternatively we could use the labels that we generated in section $1.2.1$, although then we would be constrained by the quality of our previous scoring function.
+
+Thus we propose a slightly modified approach: for each sentence, we identify and mask each verb (along with its suffix conjugation) and each copula one at a time. We feed the masked sentences to the language model. We then score each sentence based on whether the language model filled the masks with long forms or short forms.
 
 \subsubsection{Other Techniques for Politeness Labelling}
 
