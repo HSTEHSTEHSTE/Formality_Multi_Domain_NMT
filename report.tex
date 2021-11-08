@@ -19,7 +19,7 @@
 \usepackage{enumitem}                     
 
 
- \usepackage{titlesec}
+\usepackage{titlesec}
 
 \titleformat*{\section}{\bfseries}
 \titleformat*{\subsection}{\bfseries}
@@ -72,6 +72,11 @@
 
 \setenumerate[0]{label=(\alph*)}
 
+\usepackage[
+backend=biber,
+style=alphabetic,
+]{biblatex}
+\addbibresource{citations.bib}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Document begins here %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -95,9 +100,27 @@
 
 \subsection{Choice of Corpus}
 
+Countless corpuses of Japanese exist on the Internet, yet the ones that would be suitable for our needs are far and few between. There is typically a strong correlation between formality and context, which is not bad news for us since relying purely on morphology to label formality would have problems of its own. However, we want to avoid introducing into our corpus large chunks of sentences with the same context in the same formality domain, lest any of our models learns to classify contexts rather than formality. Many such examples of bad corpuses exist, such as the corpus of Japanese legal documents: in Japanese, all legal documents are written in informal form (contrary to what one might assume); we must be very careful when using such corpuses by balancing and mixing them with corpuses from other sources and with different formality domains. Examples of good corpuses include the subtitle corpus, although the translation quality of some of the sentences in that corpus has been questioned.
+
 \subsection{Politeness Labels}
 
+We designed our model to be able to handle both translation and formality classification. While extracting a representation for politeness from the automatically extracted features in a neural network pipeline isn't impossible, that is not what we are trying to achieve. Rather, we would train our model under a supervised learning scheme, where each sentence has a corresponding ground truth translation and formality label attached.
+
+One of the earliest roadblocks we faced is the scarcity of such sentence-formality pairs. Such corpuses are extremely difficult to find in sufficient quantities that would allow for adequate training of a neural classification model. Human annotation is unfortunately not so accessible for Japanese (in terms of pricing) as some other languages. As such, we devised a number of ways to generated such sentence-formality pairs.
+
 \subsubsection{Procedural Generation of Politeness Labels}
+
+Fortunately for us, this is a topic that had been studied previously by Feely et al. \cite{Feely:19}. In their case, Japanese was the destination language; the task was to generate Japanese sentences that would match the formality levels of the input. The authors identified verb suffixes as the key for indentifying sentence formality, with short-form corresponding to informal sentences and long-form corresponding to formal ones. They published a conversion script which would identify and convert any informal verb suffixes into formal verb suffixes, and vice versa.
+
+We start from their script and make two important modifications. First we adapt their conversion script into a classificaiton script. Next, we observe that while long-short verb form is generally a good identifier for sentence formality, there are also situations where a verb can be grammatically constrained to being short-form despite being used in a formal context. Analysing the grammar of a Japanese sentence is rather difficult and is something we would avoid to do; as such, we infer that a sentence that has any long-form verb is always formal whereas a sentence with short-form verbs may still be either formal or informal, with the probability of the sentence being informal increasing with the number of short-form verbs in the sentence.
+
+We also take advantage of the fact that the formality level in a single document should remain the same. This observation can serve multiple purposes:
+
+\begin{enumerate}[label=\arabic*]
+    \item A sanity check for the outputs of our script;
+    \item A tool to tune our priors for formality classes;
+    \item Simplify our calculation for classifying sentences that had been segmented into documents.
+\end{enumerate}
 
 \subsubsection{Using Pre-trained Japanese Language Model for Politeness Labelling}
 
@@ -105,4 +128,6 @@
 
 \subsection{Politeness-domain Identification}
 
+\newpage
+\printbibliography
 \end{document}

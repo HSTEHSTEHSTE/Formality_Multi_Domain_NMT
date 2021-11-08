@@ -240,6 +240,13 @@ to_polite_conj_map = {
         },
 }
 
+# labels for sentence formality classification
+formality_labels = {
+    "informal": 0,
+    "formal": 1,
+    "inconclusive": 2
+}
+
 # reverse to_polite_conj_map to get to_informal_conj_map
 to_informal_conj_map = {}
 for group in to_polite_conj_map:
@@ -454,13 +461,17 @@ def process(line):
             result[ans] += 1
     
     if sum(result) == 0:
-        result = [.5, .5]
+        outcome = formality_labels["inconclusive"]
     else:
-        result = [x / float(sum(result)) for x in result]
+        if result[1] > 0:
+            outcome = formality_labels["formal"]
+        else:
+            outcome = formality_labels["informal"]
 
     return result[1]
 
-logging.getLogger().setLevel(logging.CRITICAL)
+# logging.getLogger().setLevel(logging.CRITICAL)
+logging.getLogger().setLevel(logging.DEBUG)
 mk = Mykytea.Mykytea("-deftag UNKNOWN!!")
 load_pattern_map()
 
@@ -468,6 +479,13 @@ formal_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 informal_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/informal.txt"), "a")
 combined_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/combined_with_label.txt"), "a")
 
+
+# ************************************ #
+# Test individual sentence
+s = "私たちは不可能を可能にできるということです"
+tags = mk.getTagsToString(s)
+processed = process(tags)
+print(processed)
 
 # # ************************************ #
 # # Process legal corpus
@@ -498,19 +516,19 @@ combined_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspat
 
 # # ************************************ #
 # # Process raw corpus
-data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/raw/raw"), "r")
+# data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/raw/raw"), "r")
 
-formality_bins = [0, 0, 0]
-for n, line in enumerate(data_file):
-    s = line.split("\t")[1]
-    tags = mk.getTagsToString(s)
-    processed = process(tags)
-    if processed == 1:
-        formality_bins[1] += 1
-    elif processed == 0:
-        formality_bins[0] += 1
-    else:
-        formality_bins[2] += 1
+# formality_bins = [0, 0, 0]
+# for n, line in enumerate(data_file):
+#     s = line.split("\t")[1]
+#     tags = mk.getTagsToString(s)
+#     processed = process(tags)
+#     if processed == 1:
+#         formality_bins[1] += 1
+#     elif processed == 0:
+#         formality_bins[0] += 1
+#     else:
+#         formality_bins[2] += 1
 
-    if n % 1000 == 999:
-        print(n + 1, formality_bins)
+#     if n % 1000 == 999:
+#         print(n + 1, formality_bins)

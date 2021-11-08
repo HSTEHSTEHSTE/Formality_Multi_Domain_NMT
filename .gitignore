@@ -132,3 +132,7 @@ dmypy.json
 *.aux
 *.out
 *.gz
+*.xml
+*.bcf
+*.bbl
+*.blg
