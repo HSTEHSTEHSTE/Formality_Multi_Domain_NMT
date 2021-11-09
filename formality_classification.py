@@ -5,6 +5,7 @@ import re
 import Mykytea
 import os
 import random
+import re
 from tqdm import tqdm
 
 # informal -> polite example
@@ -445,37 +446,43 @@ def separate(s):
 # Here edit distance denotes the number of verb conjugation changes required to reach a formality domain.
 # A confidence estimation is provided by computing the ratio of the edit distance from different formality domains.
 
-def process(line):
-    result = [0 for key in maps.keys()]
-    # handle escaping of space, slash, backslash
-    line = line.replace('\\ /补助记号/UNK', '') # remove spaces
-    line = line.replace('\\/', '/') # undo escaping of slash
-    line = line.replace('\\ ', '')
-    # normalize spaces
-    line = re.sub('\s+', ' ', line)
-    # separate line into token, tag, reading triples
-    tokens, tags, readings = separate(line)
-    # search for main verb in tokens
-    verbs = search(tokens, tags)
-    for verb in verbs:
-        logging.debug('Found verb: [' + verb + ']')
-        # convert conjugation of main verb
-        ans = identify(verb)
-        if ans > -1:
-            result[ans] += 1
-    
-    if sum(result) == 0:
-        outcome = formality_labels["inconclusive"]
-    else:
-        if result[1] > 0:
-            outcome = formality_labels["formal"]
-        else:
-            outcome = formality_labels["informal"]
+def process(line_raw, mk):
+    sentences_raw = tokenise_sentence(line_raw)
+    outcome = formality_labels["inconclusive"]
+    for sentence_raw in sentences_raw:
+        line = mk.getTagsToString(sentence_raw)
+        result = [0 for key in maps.keys()]
+        # handle escaping of space, slash, backslash
+        line = line.replace('\\ /补助记号/UNK', '') # remove spaces
+        line = line.replace('\\/', '/') # undo escaping of slash
+        line = line.replace('\\ ', '')
+        # normalize spaces
+        line = re.sub('\s+', ' ', line)
+        # separate line into token, tag, reading triples
+        tokens, tags, readings = separate(line)
+        # search for main verb in tokens
+        verbs = search(tokens, tags)
+        if len(verbs) > 0:
+            verb = verbs[0]
+            logging.debug('Found verb: [' + verb + ']')
+            # identify conjugation of main verb
+            ans = identify(verb)
+            if ans > -1:
+                result[ans] += 1
+        
+        if sum(result) > 0:
+            if result[1] > 0:
+                outcome = formality_labels["formal"]
+            elif outcome != formality_labels["formal"]:
+                outcome = formality_labels["informal"]
 
-    return result[1]
+    return outcome
 
-# logging.getLogger().setLevel(logging.CRITICAL)
-logging.getLogger().setLevel(logging.DEBUG)
+def tokenise_sentence(sentence):
+    return filter(None, re.split(r'。|！|？', sentence))
+
+logging.getLogger().setLevel(logging.CRITICAL)
+# logging.getLogger().setLevel(logging.DEBUG)
 mk = Mykytea.Mykytea("-deftag UNKNOWN!!")
 load_pattern_map()
 
@@ -486,9 +493,8 @@ combined_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspat
 
 # ************************************ #
 # Test individual sentence
-s = "私たちは不可能を可能にできるということです"
-tags = mk.getTagsToString(s)
-processed = process(tags)
+s = "私たちは不可能を可能にできるということです。"
+processed = process(s, mk)
 print(processed)
 
 # # ************************************ #
