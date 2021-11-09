@@ -478,8 +478,9 @@ def process(line_raw, mk):
 
     return outcome
 
+split_criterion = re.compile('。|！|？|\\?|\!|\.\.\.|[^\S\r\n]')
 def tokenise_sentence(sentence):
-    return filter(None, re.split(r'。|！|？', sentence))
+    return filter(None, re.split(split_criterion, sentence))
 
 logging.getLogger().setLevel(logging.CRITICAL)
 # logging.getLogger().setLevel(logging.DEBUG)
@@ -533,16 +534,40 @@ combined_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspat
 # data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/raw/raw"), "r")
 
 # formality_bins = [0, 0, 0]
-# for n, line in enumerate(data_file):
+# for n, line in tqdm(enumerate(data_file), total=2801388):
 #     s = line.split("\t")[1]
-#     tags = mk.getTagsToString(s)
-#     processed = process(tags, mk)
+#     processed = process(s, mk)
 #     if processed == 1:
 #         formality_bins[1] += 1
+#         sentences = tokenise_sentence(s)
+#         for sentence in sentences:
+#             informal_file.write(sentence)
 #     elif processed == 0:
 #         formality_bins[0] += 1
+#         sentences = tokenise_sentence(s)
+#         for sentence in sentences:
+#             formal_file.write(sentence)
 #     else:
 #         formality_bins[2] += 1
 
-#     if n % 1000 == 999:
-#         print(n + 1, formality_bins)
+# ************************************ #
+# Process align corpus
+data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/para/ja.txt"), "r", encoding="shift_jisx0213")
+
+formality_bins = [0, 0, 0]
+for n, line in tqdm(enumerate(data_file), total=118143):
+    s = line
+    if ".alml" not in s:
+        processed = process(s, mk)
+        if processed == 1:
+            formality_bins[1] += 1
+            sentences = tokenise_sentence(s)
+            for sentence in sentences:
+                informal_file.write(sentence)
+        elif processed == 0:
+            formality_bins[0] += 1
+            sentences = tokenise_sentence(s)
+            for sentence in sentences:
+                formal_file.write(sentence)
+        else:
+            formality_bins[2] += 1
