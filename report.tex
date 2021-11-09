@@ -122,6 +122,8 @@ We also take advantage of the fact that the formality level in a single document
     \item Simplify our calculation for classifying sentences that had been segmented into documents.
 \end{enumerate}
 
+We performed a sanity check on the legal corpus we mentioned earlier (a corpus entirely made up of informal sentences) and got very positive results: not a single sentence in the corpus of $262000$ lines were identified as formal.
+
 \subsubsection{Using Pre-trained Japanese Language Model for Politeness Labelling}
 
 While Japanese is not nearly as high-resource as English (GPT-3 was never specifically trained on Japanese, for example), there are nevertheless some available pre-trained Japanese language models that are available. One of the best recent models that were developed is the Japanese BERT trained at Tohoku University. Similar to the original BERT, this model performs a mask-filling task on Japanese sentences. 

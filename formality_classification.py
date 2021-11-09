@@ -245,7 +245,7 @@ to_polite_conj_map = {
 formality_labels = {
     "informal": 0,
     "formal": 1,
-    "inconclusive": 2
+    "inconclusive": .5
 }
 
 # reverse to_polite_conj_map to get to_informal_conj_map
@@ -491,23 +491,23 @@ informal_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspat
 combined_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/combined_with_label.txt"), "a")
 
 
-# ************************************ #
-# Test individual sentence
-s = "私たちは不可能を可能にできるということです。"
-processed = process(s, mk)
-print(processed)
+# # ************************************ #
+# # Test individual sentence
+# s = "私たちは不可能を可能にできるということです。"
+# processed = process(s, mk)
+# print(processed)
 
 # # ************************************ #
 # # Process legal corpus
+# data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/jaen-law/txt/law-corpus.ja"), "r")
 # total_processed = 0
 # for n, s in enumerate(data_file):
 #     if random.random() > .9:
-#         tags = mk.getTagsToString(s)
-
-#         processed = process(tags)
+#         processed = process(s, mk)
 #     else:
 #         processed = .5
 #     total_processed += processed
+
 #     if n % 1000 == 999:
 #         print(n + 1, total_processed / (n + 1))
     
@@ -517,11 +517,15 @@ print(processed)
 # if total_processed / (n + 1) < .5:
 #     print("Document is informal.")
 #     for line in tqdm(data_file, total = n + 1):
-#         informal_file.write(line)
+#         sentences = tokenise_sentence(line)
+#         for sentence in sentences:
+#             informal_file.write(sentence)
 # else:
 #     print("Document is formal.")
 #     for line in tqdm(data_file, total = n + 1):
-#         formal_file.write(line)
+#         sentences = tokenise_sentence(line)
+#         for sentence in sentences:
+#             formal_file.write(sentence)
 
 
 # # ************************************ #
@@ -532,7 +536,7 @@ print(processed)
 # for n, line in enumerate(data_file):
 #     s = line.split("\t")[1]
 #     tags = mk.getTagsToString(s)
-#     processed = process(tags)
+#     processed = process(tags, mk)
 #     if processed == 1:
 #         formality_bins[1] += 1
 #     elif processed == 0:
