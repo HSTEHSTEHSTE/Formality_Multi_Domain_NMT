@@ -71,6 +71,8 @@
 \newcommand{\mnote}[1]{\normalmarginpar \marginpar{\tiny #1}}
 
 \setenumerate[0]{label=(\alph*)}
+\setcounter{tocdepth}{4}
+\setcounter{secnumdepth}{4}
 
 \usepackage[
 backend=biber,
@@ -132,9 +134,17 @@ While Japanese is not nearly as high-resource as English (GPT-3 was never specif
 
 The obvious way of making use of a pre-trained language model for politeness labelling would be to fine-tuned it on the new task. However, that would require correctly labelled data, leading us to a chicken-and-egg problem. Alternatively we could use the labels that we generated in section $1.2.1$, although then we would be constrained by the quality of our previous scoring function.
 
-Thus we propose a slightly modified approach: for each sentence, we identify and mask each verb (along with its suffix conjugation) and each copula one at a time. We feed the masked sentences to the language model. We then score each sentence based on whether the language model filled the masks with long forms or short forms.
+A slightly modified approach would be: for each sentence, we identify and mask each verb (along with its suffix conjugation) and each copula one at a time. We feed the masked sentences to the language model. We then score each sentence based on whether the language model filled the masks with long forms or short forms.
 
-\subsubsection{Discovering Formality Labels in Encoded Japanese Sentences}
+\paragraph{BERT Fine-tuned on Formality Classification}
+
+The setup for this experiment is simple: we take a pre-trained Japanese language model and attempt to fine tune it with the sentence-formality label pairs that we generated in section $1.2.1$. We first try viewing this problem as a scoring problem, with the model tuned to produce a score between $0$ and $1$ for each document and with a score greater than $.5$ indicating that the model considers the document to be formal, and vice versa. We tried two different experimental settings, one where ambiguous sentences (those that didn't contain a formality indicator) are mixed in with target score $.5$, the other where ambiguous sentences are not included.
+
+The other approach is to regard the problem as a two-class classification task. We do not introduce a third class of ambiguous sentences under this setting, since it is questionable from a linguistic point of view to label these sentences as "formality-free".
+
+\paragraph{Masking Decisive Verb/Copula}
+
+This setup doesn't even require any fine-tuning, simply deploying existing mask-fill language models and masking the correct words would suffice. 
 
 \subsubsection{Other Techniques for Politeness Labelling}
 
