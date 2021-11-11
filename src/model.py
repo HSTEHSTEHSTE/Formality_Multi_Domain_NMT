@@ -12,12 +12,14 @@ class TransformerEncoder(nn.Module):
         self.nlayers = nlayers
         self.dropout = dropout
         self.embedder = nn.Embedding(num_embeddings=self.input_size, embedding_dim=self.d_model)
+        self.position_encoder = PositionalEncoding(d_model=self.d_model, dropout=self.dropout)
 
         self.transformer_encoder_layer = nn.TransformerEncoderLayer(d_model=self.d_model, dropout=self.dropout)
         self.transformer_encoder = nn.TransformerEncoder(self.transformer_encoder_layer, num_layers=self.nlayers)
 
     def forward(self, input):
         input_embedded = self.embedder(input)
+        input_embedded = self.position_encoder(input_embedded)
         output = self.transformer_encoder(input_embedded)
         return output
 
@@ -36,10 +38,14 @@ class TransformerDecoder(nn.Module):
         self.transformer_decoder_layer = nn.TransformerDecoderLayer(d_model=self.d_model, dropout=self.dropout)
         self.transformer_decoder = nn.TransformerDecoder(self.transformer_decoder_layer, num_layers=self.n_layers)
 
+    def generate_mask(self):
+        return torch.triu(torch.ones(self.d_model, self.d_model) * float('-inf'), diagonal=1)
+
     def forward(self, target, memory):
+        target_mask = self.generate_mask()
         target_embedded = self.embedder(target)
         target_embedded = self.position_encoder(target_embedded)
-        output_embedded = self.transformer_decoder(target_embedded, memory)
+        output_embedded = self.transformer_decoder(target_embedded, memory, tgt_mask=target_mask)
         output = self.decoder(output_embedded)
         return output
 
