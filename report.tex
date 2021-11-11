@@ -150,9 +150,29 @@ This setup doesn't even require any fine-tuning, simply deploying existing mask-
 
 Some other techniques for politeness labelling of Japanese and other languages had been proposed, and we will discuss them briefly here. Dugan \cite{Dugan:20} proposed generating politeness labels from the corresponding English translation, an idea we didn't find convincing due to the inherent problems associated with inferring formality from English which has relatively few clear markers for formality, not the mention the problem with noise introduced by otherwise perfect translations with incorrect formality.
 
-\section{Training Task}
+\section{Model Architecture}
 
-\subsection{Politeness-domain Identification}
+A number of possible architectures could be used to integrate the translation task with the formality labelling task. We implement a number of thems, comparing their performance when their tasks are comparable.
+
+\subsection{Base translation model without formality labels}
+
+We first build a base translation model that doesn't take formality into account. We will use its performance as a baseline and attempt to beat its performance with our formality-aware model. For test cases where either the source or the target language doesn't have strong formality classes (such as Japanese-English or vice versa), we are only interested in the translation quality. For cases where both the source and the target language have strong formality classes (such as Korean-Japanese), we are also interested in formality class correspondance.
+
+\subsection{Base Autoencoder}
+
+This can be seen as a special case of the base translation model, except that the source and the target languages are identical and we measure its ability to reconstruct the original sentence as well as the correct formality label.
+
+\subsection{Encoder-Decoder Decomposition}
+
+We decompose the usual encoder-decoder, using the encoder output as the basis for the formality labelling task. We build a separate classification module which takes encoder output as input and produces a formality label prediction. During training time, the loss function is constructed as a weighted sum of the translation loss and the formality label loss.
+
+\subsection{Formaltiy Autoencoder}
+
+This setting can been seen extending the base autoencoder setting. Here we combine the encoder output with the output of the classifier and feed it back to a decoder which emits a sequence in the source language. We then measure how well the model preserves both the meaning and the formality of the original sentence.
+
+\subsection{Formality-Aware Translation}
+
+This is the generalised version of the formality autoencoder, where the target language is different from the source language (finally the true translation setting). We compare the results with the base translation model without formality labels.
 
 \newpage
 \printbibliography
