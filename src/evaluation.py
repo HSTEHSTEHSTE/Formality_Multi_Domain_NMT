@@ -53,5 +53,7 @@ def calculate_sentence_similarity(hypothesis, reference, embedding_dict, embeddi
         hypothesis_embedding += embedding_dict[hypothesis_word]
     for reference_word in reference:
         reference_embedding += embedding_dict[reference_word]
+    hypothesis_embedding = hypothesis_embedding / len(hypothesis)
+    reference_embedding = reference_embedding / len(reference)
     similarity = np.dot(hypothesis_embedding, reference_embedding)/(np.linalg.norm(hypothesis_embedding) * np.linalg.nomr(reference_embedding))
     return similarity
