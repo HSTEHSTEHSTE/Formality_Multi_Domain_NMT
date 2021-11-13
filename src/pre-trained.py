@@ -3,7 +3,6 @@ import torch
 import model
 import os
 import pandas as pd
-import random
 import tqdm
 
 bertjapanese = AutoModel.from_pretrained("cl-tohoku/bert-base-japanese-char")
@@ -11,8 +10,10 @@ tokenizer = AutoTokenizer.from_pretrained("cl-tohoku/bert-base-japanese-char")
 
 # Hyper parameters
 batch_size = 128
+dev_batch_size = 16
 max_iterations = 100
 initial_learning_rate = .001
+lr_decay = .5
 print_every = 2
 
 # Load data
@@ -30,6 +31,8 @@ train_data_array = data_array.loc[dev_size + test_size:]
 classifier = model.LinearDecoder(768, 2) # Magic numbers: 768 length of pre-trained BERT output; 2: number of formality labels
 criterion = torch.nn.NLLLoss()
 optimiser = torch.optim.Adam(classifier.parameters(), lr=initial_learning_rate, weight_decay=0)
+previous_loss = None
+lr = initial_learning_rate
 
 for iteration_number in range(0, max_iterations):
     batch_array = train_data_array.sample(n=batch_size)
@@ -45,11 +48,39 @@ for iteration_number in range(0, max_iterations):
     classifier.train()
 
     optimiser.zero_grad()
+    
     # main forward pass
     output_labels = classifier(classifier_input_batched).squeeze(1) # shape [batch_size, 2]
     loss = criterion(output_labels, target_labels)
     loss.backward()
     optimiser.step()
 
+    # calculate dev loss, update learning rate
     if (iteration_number + 1) % print_every == 0:
-        print("Iteration ", iteration_number, " , loss is ", loss.item())
+        print("Iteration ", iteration_number + 1, " , loss is ", loss.item())
+
+        dev_batch_array = dev_data_array.sample(n=dev_batch_size)
+        dev_output_pooled_list = []
+        for sentence_label_pair in tqdm.tqdm(dev_batch_array.iterrows(), total=batch_size):
+            sentence = sentence_label_pair[1].iloc[0][:510] # magic number 512: pre-trained BERT length limit
+            inputs = tokenizer(sentence, return_tensors="pt")
+            output_pooled = bertjapanese(**inputs).pooler_output # shape [1, 768]
+            dev_output_pooled_list.append(output_pooled)
+        dev_target_labels = torch.tensor(dev_batch_array.iloc[:, [1]].to_numpy()).squeeze(1) # shape [dev_batch_size]
+
+        dev_classifier_input_batched = torch.stack(dev_output_pooled_list, dim=0) # shape [dev_batch_size, 768]
+        classifier.eval()
+
+        optimiser.zero_grad()
+        dev_output_labels = classifier(dev_classifier_input_batched).squeeze(1) # shape [dev_batch_size, 2]
+        
+        # update learning rate
+        dev_loss = criterion(output_labels, target_labels)
+        if previous_loss is None:
+            previous_loss = dev_loss
+        elif previous_loss < dev_loss:
+            lr_new = lr * lr_decay
+            print("Dev loss increased. Reducing learning rate from ", lr, " to ", lr_new)
+            lr = lr_new
+            for param_group in optimiser.param_groups:
+                param_group["lr"] = lr
