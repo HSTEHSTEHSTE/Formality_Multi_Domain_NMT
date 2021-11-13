@@ -51,5 +51,5 @@ for iteration_number in range(0, max_iterations):
     loss.backward()
     optimiser.step()
 
-    if iteration_number + 1 % print_every == 0:
+    if (iteration_number + 1) % print_every == 0:
         print("Iteration ", iteration_number, " , loss is ", loss.item())
