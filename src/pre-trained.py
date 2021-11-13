@@ -82,9 +82,15 @@ for iteration_number in range(0, max_iterations):
 
         optimiser.zero_grad()
         dev_output_labels = classifier(dev_classifier_input_batched).squeeze(1) # shape [dev_batch_size, 2]
+        dev_loss = criterion(dev_output_labels, dev_target_labels)
+
+        # calculate training accuracy
+        dev_output_labels = torch.argmax(dev_output_labels, dim=1)
+        dev_accuracy_tensor = torch.where(dev_output_labels - dev_target_labels < .5, torch.tensor(1), torch.tensor(0))
+        dev_accuracy = torch.sum(dev_accuracy_tensor) / dev_batch_size
+        print("Dev loss is ", dev_loss.item(), " , dev accuracy is ", dev_accuracy.item())
         
         # update learning rate
-        dev_loss = criterion(dev_output_labels, dev_target_labels)
         if previous_loss is None:
             previous_loss = dev_loss
         elif previous_loss < dev_loss:
