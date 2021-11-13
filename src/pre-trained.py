@@ -34,6 +34,8 @@ optimiser = torch.optim.Adam(classifier.parameters(), lr=initial_learning_rate, 
 previous_loss = None
 lr = initial_learning_rate
 
+accuracies = []
+losses = []
 for iteration_number in range(0, max_iterations):
     batch_array = train_data_array.sample(n=batch_size)
     output_pooled_list = []
@@ -59,6 +61,8 @@ for iteration_number in range(0, max_iterations):
     output_labels = torch.argmax(output_labels, dim=1)
     accuracy_tensor = torch.where(output_labels - target_labels < .5, torch.tensor(1), torch.tensor(0))
     accuracy = torch.sum(accuracy_tensor) / batch_size
+    accuracies.append(accuracy)
+    losses.append(loss.item())
 
     # calculate dev loss, update learning rate
     if (iteration_number + 1) % print_every == 0:
@@ -66,7 +70,7 @@ for iteration_number in range(0, max_iterations):
 
         dev_batch_array = dev_data_array.sample(n=dev_batch_size)
         dev_output_pooled_list = []
-        for sentence_label_pair in tqdm.tqdm(dev_batch_array.iterrows(), total=batch_size):
+        for sentence_label_pair in tqdm.tqdm(dev_batch_array.iterrows(), total=dev_batch_size):
             sentence = sentence_label_pair[1].iloc[0][:510] # magic number 512: pre-trained BERT length limit
             inputs = tokenizer(sentence, return_tensors="pt")
             output_pooled = bertjapanese(**inputs).pooler_output # shape [1, 768]
