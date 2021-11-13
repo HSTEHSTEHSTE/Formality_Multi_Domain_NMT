@@ -13,7 +13,7 @@ tokenizer = AutoTokenizer.from_pretrained("cl-tohoku/bert-base-japanese-char")
 batch_size = 128
 max_iterations = 100
 initial_learning_rate = .001
-print_every = 10
+print_every = 2
 
 # Load data
 data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data/data.csv"), header=None, index_col=None, delimiter=',')

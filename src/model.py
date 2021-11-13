@@ -98,10 +98,12 @@ class LinearDecoder(nn.Module):
     def __init__(self, input_size, output_size):
         super(LinearDecoder, self).__init__()
         self.linear = nn.Linear(input_size, output_size, bias=True)
-        self.logsoftmax = nn.LogSoftmax(dim = 1)
+        self.logsoftmax = nn.LogSoftmax(dim=2)
     
-    def forward(self, input):
+    def forward(self, classifier_input):
         """
             input: [batch_size, input_size]
         """
-        return self.logsoftmax(self.linear(input))
+        linear_output = self.linear(classifier_input)
+        logsoftmax_output = self.logsoftmax(linear_output)
+        return logsoftmax_output
