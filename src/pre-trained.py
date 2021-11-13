@@ -91,12 +91,11 @@ for iteration_number in range(0, max_iterations):
         print("Dev loss is ", dev_loss.item(), " , dev accuracy is ", dev_accuracy.item())
         
         # update learning rate
-        if previous_loss is None:
-            previous_loss = dev_loss
-        elif previous_loss < dev_loss:
+        if previous_loss is not None and previous_loss < dev_loss:
             lr_new = lr * lr_decay
             print("Dev loss increased. Reducing learning rate from ", lr, " to ", lr_new)
             lr = lr_new
             for param_group in optimiser.param_groups:
                 param_group["lr"] = lr
+        else:
             previous_loss = dev_loss
