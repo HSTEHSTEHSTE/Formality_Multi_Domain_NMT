@@ -91,3 +91,13 @@ class PositionalEncoding(nn.Module):
 
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
+
+class LinearDecoder(nn.Module):
+    def __init__(self, input_size, output_size):
+        self.linear = nn.Linear(input_size, output_size, bias=True)
+    
+    def forward(self, input):
+        """
+            input: [batch_size, input_size]
+        """
+        return self.linear(input)
