@@ -10,7 +10,7 @@ tokenizer = AutoTokenizer.from_pretrained("cl-tohoku/bert-base-japanese-char")
 
 # Hyper parameters
 batch_size = 128
-dev_batch_size = 16
+dev_batch_size = 32
 max_iterations = 100
 initial_learning_rate = .001
 lr_decay = .5
@@ -99,3 +99,4 @@ for iteration_number in range(0, max_iterations):
             lr = lr_new
             for param_group in optimiser.param_groups:
                 param_group["lr"] = lr
+            previous_loss = dev_loss
