@@ -7,6 +7,7 @@ class TransformerEncoder(nn.Module):
     """Transformer encoder"""
 
     def __init__(self, input_size, d_model, nlayers, dropout = .5):
+        super(TransformerEncoder, self).__init__()
         self.input_size = input_size
         self.d_model = d_model
         self.nlayers = nlayers
@@ -27,6 +28,7 @@ class TransformerDecoder(nn.Module):
     """Transformer decoder"""
 
     def __init__(self, target_size, d_model, n_layers, dropout = .5):
+        super(TransformerDecoder, self).__init__()
         self.target_size = target_size
         self.d_model = d_model
         self.n_layers = n_layers
@@ -94,10 +96,12 @@ class PositionalEncoding(nn.Module):
 
 class LinearDecoder(nn.Module):
     def __init__(self, input_size, output_size):
+        super(LinearDecoder, self).__init__()
         self.linear = nn.Linear(input_size, output_size, bias=True)
+        self.logsoftmax = nn.LogSoftmax(dim = 1)
     
     def forward(self, input):
         """
             input: [batch_size, input_size]
         """
-        return self.linear(input)
+        return self.logsoftmax(self.linear(input))
