@@ -55,9 +55,14 @@ for iteration_number in range(0, max_iterations):
     loss.backward()
     optimiser.step()
 
+    # calculate training accuracy
+    output_labels = torch.argmax(output_labels, dim=1)
+    accuracy_tensor = torch.where(output_labels - target_labels < .5, torch.tensor(1), torch.tensor(0))
+    accuracy = torch.sum(accuracy_tensor) / batch_size
+
     # calculate dev loss, update learning rate
     if (iteration_number + 1) % print_every == 0:
-        print("Iteration ", iteration_number + 1, " , loss is ", loss.item())
+        print("Iteration ", iteration_number + 1, " , loss is ", loss.item(), " , training accuracy is ", accuracy.item())
 
         dev_batch_array = dev_data_array.sample(n=dev_batch_size)
         dev_output_pooled_list = []
@@ -75,7 +80,7 @@ for iteration_number in range(0, max_iterations):
         dev_output_labels = classifier(dev_classifier_input_batched).squeeze(1) # shape [dev_batch_size, 2]
         
         # update learning rate
-        dev_loss = criterion(output_labels, target_labels)
+        dev_loss = criterion(dev_output_labels, dev_target_labels)
         if previous_loss is None:
             previous_loss = dev_loss
         elif previous_loss < dev_loss:
