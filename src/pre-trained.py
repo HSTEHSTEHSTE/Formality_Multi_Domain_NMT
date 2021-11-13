@@ -37,10 +37,10 @@ for iteration_number in range(0, max_iterations):
     for sentence_label_pair in tqdm.tqdm(batch_array.iterrows(), total=batch_size):
         sentence = sentence_label_pair[1].iloc[0]
         inputs = tokenizer(sentence, return_tensors="pt")
-        if inputs.input_ids.shape[0] > 512: # magic number 512: pre-trained BERT length limit
-            inputs.input_ids = inputs.input_ids[:512]
-            inputs.token_type_ids = inputs.token_type_ids[:512]
-            inputs.attention_mask = inputs.attention_mask[:512]
+        if inputs.input_ids.shape[1] > 512: # magic number 512: pre-trained BERT length limit
+            inputs.input_ids = inputs.input_ids[:, :512]
+            inputs.token_type_ids = inputs.token_type_ids[:, :512]
+            inputs.attention_mask = inputs.attention_mask[:, :512]
         output_pooled = bertjapanese(**inputs).pooler_output # shape [1, 768]
         output_pooled_list.append(output_pooled)
     target_labels = torch.tensor(batch_array.iloc[:, [1]].to_numpy()).squeeze(1) # shape [batch_size]
