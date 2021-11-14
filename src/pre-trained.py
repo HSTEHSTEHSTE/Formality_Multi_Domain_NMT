@@ -144,4 +144,4 @@ for test_batch_number in tqdm.tqdm(range(0, test_batches), total=test_batches):
     test_accuracy_tensor = torch.where(test_output_labels - test_target_labels < .5, torch.tensor(1), torch.tensor(0))
     test_accuracy = torch.sum(test_accuracy_tensor).item()
     total_test_accuracy += test_accuracy
-print("Test accuracy: ", total_accuracy / (test_batches * batch_size))
+print("Test accuracy: ", total_test_accuracy / (test_batches * batch_size))
