@@ -15,7 +15,8 @@ max_iterations = 100
 initial_learning_rate = .001
 lr_decay = .5
 print_every = 2
-lr_threshold = .0000001
+lr_threshold = .00001
+use_gpu = True
 
 # Load data
 data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data/data.csv"), header=None, index_col=None, delimiter=',')
@@ -52,6 +53,9 @@ for iteration_number in range(0, max_iterations):
     target_labels = torch.tensor(batch_array.iloc[:, [1]].to_numpy()).squeeze(1) # shape [batch_size]
 
     classifier_input_batched = torch.stack(output_pooled_list, dim=0) # shape [batch_size, 768]
+    if use_gpu:
+        target_labels.to(device="cuda")
+        classifier_input_batched.to(device="cuda")
     classifier.train()
 
     optimiser.zero_grad()
@@ -83,6 +87,9 @@ for iteration_number in range(0, max_iterations):
     dev_target_labels = torch.tensor(dev_batch_array.iloc[:, [1]].to_numpy()).squeeze(1) # shape [dev_batch_size]
 
     dev_classifier_input_batched = torch.stack(dev_output_pooled_list, dim=0) # shape [dev_batch_size, 768]
+    if use_gpu:
+        dev_target_labels.to(device="cuda")
+        dev_classifier_input_batched.to(device="cuda")
     classifier.eval()
 
     optimiser.zero_grad()
@@ -135,6 +142,9 @@ for test_batch_number in tqdm.tqdm(range(0, test_batches), total=test_batches):
     test_target_labels = torch.tensor(test_batch_array.iloc[:, [1]].to_numpy()).squeeze(1) # shape [dev_batch_size]
 
     test_classifier_input_batched = torch.stack(test_output_pooled_list, dim=0) # shape [dev_batch_size, 768]
+    if use_gpu:
+        test_target_labels.to(device="cuda")
+        test_classifier_input_batched.to(device="cuda")
     classifier.eval()
 
     test_output_labels = classifier(test_classifier_input_batched).squeeze(1) # shape [dev_batch_size, 2]
