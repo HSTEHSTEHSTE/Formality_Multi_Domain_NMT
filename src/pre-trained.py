@@ -125,7 +125,7 @@ test_batches = int(test_size / batch_size)
 total_test_accuracy = 0
 for test_batch_number in tqdm.tqdm(range(0, test_batches), total=test_batches):
     # load test data
-    test_batch_array = test_data_array.loc[test_batch_number * batch_size:(test_batch_number + 1) * batch_size]
+    test_batch_array = test_data_array[test_batch_number * batch_size:(test_batch_number + 1) * batch_size]
     test_output_pooled_list = []
     for sentence_label_pair in test_batch_array.iterrows():
         sentence = sentence_label_pair[1].iloc[0][:510] # magic number 512: pre-trained BERT length limit
