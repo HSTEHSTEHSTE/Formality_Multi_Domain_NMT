@@ -90,7 +90,7 @@ for iteration_number in range(0, max_iterations):
     dev_loss = criterion(dev_output_labels, dev_target_labels).item()
     total_dev_loss += dev_loss
 
-    # calculate training accuracy
+    # calculate dev accuracy
     dev_output_labels = torch.argmax(dev_output_labels, dim=1)
     dev_accuracy_tensor = torch.where(dev_output_labels - dev_target_labels < .5, torch.tensor(1), torch.tensor(0))
     dev_accuracy = torch.sum(dev_accuracy_tensor).item()
@@ -118,3 +118,30 @@ for iteration_number in range(0, max_iterations):
 
         if lr < lr_threshold:
             break
+
+    
+# run final pass in test data set
+test_batches = int(test_size / batch_size)
+total_test_accuracy = 0
+for test_batch_number in tqdm.tqdm(range(0, test_batches), total=test_batches):
+    # load test data
+    test_batch_array = test_data_array.loc[test_batch_number * batch_size:(test_batch_number + 1) * batch_size]
+    test_output_pooled_list = []
+    for sentence_label_pair in test_batch_array.iterrows():
+        sentence = sentence_label_pair[1].iloc[0][:510] # magic number 512: pre-trained BERT length limit
+        inputs = tokenizer(sentence, return_tensors="pt")
+        output_pooled = bertjapanese(**inputs).pooler_output # shape [1, 768]
+        test_output_pooled_list.append(output_pooled)
+    test_target_labels = torch.tensor(test_batch_array.iloc[:, [1]].to_numpy()).squeeze(1) # shape [dev_batch_size]
+
+    test_classifier_input_batched = torch.stack(test_output_pooled_list, dim=0) # shape [dev_batch_size, 768]
+    classifier.eval()
+
+    test_output_labels = classifier(test_classifier_input_batched).squeeze(1) # shape [dev_batch_size, 2]
+
+    # calculate test accuracy
+    test_output_labels = torch.argmax(test_output_labels, dim=1)
+    test_accuracy_tensor = torch.where(test_output_labels - test_target_labels < .5, torch.tensor(1), torch.tensor(0))
+    test_accuracy = torch.sum(test_accuracy_tensor).item()
+    total_test_accuracy += test_accuracy
+print("Test accuracy: ", total_accuracy / (test_batches * batch_size))
