@@ -146,7 +146,7 @@ The pre-trained model that we used was BertJapanese, developed by Masatoshi Suzu
 
 In our experiments, we were able to achieve a labelling accuracy of $.8235$ for our generated formality label data. We observe similar movements in train and dev accuracy and loss during training, as well as comparable test accuracy compared to train and dev accuracy. Given the size of our test data set ($152576$), we believe our results are robust and not the result of any fortuitous statistical event.
 
-We compare those results to the ones we achieved from a BERT model based on word tokenisation.
+We compare those results to the ones we achieved from a BERT model based on word tokenisation. The accuracy was comparable to the character-based BERT, at $.8158$, however there was a substantial runtime reduction due to word-level tokenised sequences being shorter than character-level tokenised ones (average length of a Japanese word is around $2$ characters, however we would expect -a and did observe - speedup less than $50\%$ due to punctuations, numbers, non-Japanese characters, etc.). 
 
 \paragraph{Masking Decisive Verb/Copula}
 
