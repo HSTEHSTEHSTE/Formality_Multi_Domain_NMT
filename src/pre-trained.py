@@ -5,8 +5,13 @@ import os
 import pandas as pd
 import tqdm
 
-bertjapanese = AutoModel.from_pretrained("cl-tohoku/bert-base-japanese-char")
-tokenizer = AutoTokenizer.from_pretrained("cl-tohoku/bert-base-japanese-char")
+# # character-tokenised
+# bertjapanese = AutoModel.from_pretrained("cl-tohoku/bert-base-japanese-char")
+# tokenizer = AutoTokenizer.from_pretrained("cl-tohoku/bert-base-japanese-char")
+
+# word-tokenised
+bertjapanese = AutoModel.from_pretrained("cl-tohoku/bert-base-japanese")
+tokenizer = AutoTokenizer.from_pretrained("cl-tohoku/bert-base-japanese")
 
 # Hyper parameters
 batch_size = 128
@@ -17,6 +22,7 @@ lr_decay = .5
 print_every = 2
 lr_threshold = .00001
 use_gpu = True
+device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
 
 # Load data
 data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data/data.csv"), header=None, index_col=None, delimiter=',')
@@ -31,6 +37,8 @@ train_data_array = data_array.loc[dev_size + test_size:]
 
 # Initialise model
 classifier = model.LinearDecoder(768, 2) # Magic numbers: 768 length of pre-trained BERT output; 2: number of formality labels
+classifier = classifier.to(device=device)
+
 criterion = torch.nn.NLLLoss()
 optimiser = torch.optim.Adam(classifier.parameters(), lr=initial_learning_rate, weight_decay=0)
 previous_loss = None
@@ -53,9 +61,8 @@ for iteration_number in range(0, max_iterations):
     target_labels = torch.tensor(batch_array.iloc[:, [1]].to_numpy()).squeeze(1) # shape [batch_size]
 
     classifier_input_batched = torch.stack(output_pooled_list, dim=0) # shape [batch_size, 768]
-    if use_gpu:
-        target_labels.to(device="cuda")
-        classifier_input_batched.to(device="cuda")
+    target_labels = target_labels.to(device=device)
+    classifier_input_batched = classifier_input_batched.to(device=device)
     classifier.train()
 
     optimiser.zero_grad()
@@ -68,7 +75,7 @@ for iteration_number in range(0, max_iterations):
 
     # calculate training accuracy
     output_labels = torch.argmax(output_labels, dim=1)
-    accuracy_tensor = torch.where(output_labels - target_labels < .5, torch.tensor(1), torch.tensor(0))
+    accuracy_tensor = torch.where(output_labels - target_labels < .5, torch.tensor(1).to(device=device), torch.tensor(0).to(device=device))
     accuracy_batch = torch.sum(accuracy_tensor).item()
     accuracy = accuracy_batch / batch_size
     total_accuracy += accuracy
@@ -87,9 +94,8 @@ for iteration_number in range(0, max_iterations):
     dev_target_labels = torch.tensor(dev_batch_array.iloc[:, [1]].to_numpy()).squeeze(1) # shape [dev_batch_size]
 
     dev_classifier_input_batched = torch.stack(dev_output_pooled_list, dim=0) # shape [dev_batch_size, 768]
-    if use_gpu:
-        dev_target_labels.to(device="cuda")
-        dev_classifier_input_batched.to(device="cuda")
+    dev_target_labels = dev_target_labels.to(device=device)
+    dev_classifier_input_batched = dev_classifier_input_batched.to(device=device)
     classifier.eval()
 
     optimiser.zero_grad()
@@ -99,7 +105,7 @@ for iteration_number in range(0, max_iterations):
 
     # calculate dev accuracy
     dev_output_labels = torch.argmax(dev_output_labels, dim=1)
-    dev_accuracy_tensor = torch.where(dev_output_labels - dev_target_labels < .5, torch.tensor(1), torch.tensor(0))
+    dev_accuracy_tensor = torch.where(dev_output_labels - dev_target_labels < .5, torch.tensor(1).to(device=device), torch.tensor(0).to(device=device))
     dev_accuracy = torch.sum(dev_accuracy_tensor).item()
     total_dev_accuracy += dev_accuracy
 
@@ -142,16 +148,15 @@ for test_batch_number in tqdm.tqdm(range(0, test_batches), total=test_batches):
     test_target_labels = torch.tensor(test_batch_array.iloc[:, [1]].to_numpy()).squeeze(1) # shape [dev_batch_size]
 
     test_classifier_input_batched = torch.stack(test_output_pooled_list, dim=0) # shape [dev_batch_size, 768]
-    if use_gpu:
-        test_target_labels.to(device="cuda")
-        test_classifier_input_batched.to(device="cuda")
+    test_target_labels = test_target_labels.to(device=device)
+    test_classifier_input_batched = test_classifier_input_batched.to(device=device)
     classifier.eval()
 
     test_output_labels = classifier(test_classifier_input_batched).squeeze(1) # shape [dev_batch_size, 2]
 
     # calculate test accuracy
     test_output_labels = torch.argmax(test_output_labels, dim=1)
-    test_accuracy_tensor = torch.where(test_output_labels - test_target_labels < .5, torch.tensor(1), torch.tensor(0))
+    test_accuracy_tensor = torch.where(test_output_labels - test_target_labels < .5, torch.tensor(1).to(device=device), torch.tensor(0).to(device=device))
     test_accuracy = torch.sum(test_accuracy_tensor).item()
     total_test_accuracy += test_accuracy
 print("Test accuracy: ", total_test_accuracy / (test_batches * batch_size))
