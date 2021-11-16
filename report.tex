@@ -170,6 +170,8 @@ A number of possible architectures could be used to integrate the translation ta
 
 We first build a base translation model that doesn't take formality into account. We will use its performance as a baseline and attempt to beat its performance with our formality-aware model. For test cases where either the source or the target language doesn't have strong formality classes (such as Japanese-English or vice versa), we are only interested in the translation quality. For cases where both the source and the target language have strong formality classes (such as Korean-Japanese), we are also interested in formality class correspondance.
 
+The base translation model we choose for our task is the fairseq implementation of the BART (Bidirectional and Auto-Regressive Transformer) architecture. The encoder-decoder construction is significant for us, since the pooled encoder output is going to be the basis for our formality classifier (similar to what we did with the pre-trained Japanese BERT). One recent work \cite{BART:21} applied this model on the Japanese-Korean and Japanese-English machine translation tasks with a fair amount of success. 
+
 \subsection{Base Autoencoder-Reconstructor}
 
 This can be seen as a special case of the base translation model, except that the source and the target languages are identical and we measure its ability to reconstruct the original sentence as well as the correct formality label.
