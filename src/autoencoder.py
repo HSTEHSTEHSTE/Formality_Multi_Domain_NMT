@@ -1,13 +1,17 @@
 import torch
-from fairseq.models.transformer import transformer_encoder
-from fairseq.models.transformer import transformer_decoder
-from fairseq.models.transformer import transformer_config
+from fairseq.models.transformer.transformer_encoder import TransformerEncoder
+from fairseq.models.transformer.transformer_decoder import TransformerDecoder
+from fairseq.models.transformer.transformer_config import TransformerConfig
+from fairseq.data.dictionary import Dictionary
 
 # Build config objects
-config = transformer_config.TransformerConfig # default config
+config = TransformerConfig # default config
+
+# Build dictionary
+ja_dict = Dictionary()
 
 # Build encoder and decoder objects
-encoder = transformer_encoder.TransformerEncoder(config)
-decoder = transformer_decoder.TransformerDecoder(config)
+encoder = TransformerEncoder(config, ja_dict)
+decoder = TransformerDecoder(config, ja_dict)
 
 
