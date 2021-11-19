@@ -1,4 +1,5 @@
 import torch
+from torch import nn
 from fairseq.models.transformer.transformer_encoder import TransformerEncoder
 from fairseq.models.transformer.transformer_decoder import TransformerDecoder
 from fairseq.models.transformer.transformer_config import TransformerConfig
@@ -7,7 +8,7 @@ import os
 import tqdm
 
 # Build config objects
-config = TransformerConfig # default config
+config = TransformerConfig() # default config
 
 # Build dictionary
 ja_dict = Dictionary()
@@ -22,8 +23,11 @@ for line in tqdm.tqdm(data_file, total=575124):
 
 ja_dict.finalize()
 
+# Build word embedding
+# Use naive pytorch embedding
+ja_dictionary_size = len(ja_dict)
+ja_embedding = nn.Embedding(ja_dictionary_size, 512, padding_idx=1) # 512: default embed_dim; 1: default pad value
+
 # Build encoder and decoder objects
-encoder = TransformerEncoder(config, ja_dict)
-decoder = TransformerDecoder(config, ja_dict)
-
-
+encoder = TransformerEncoder(config, ja_dict, ja_embedding)
+decoder = TransformerDecoder(config, ja_dict, ja_embedding)
