@@ -6,6 +6,7 @@ from fairseq.models.transformer.transformer_config import TransformerConfig
 from fairseq.data.dictionary import Dictionary
 import os
 import tqdm
+import pandas as pd
 
 # Build config objects
 config = TransformerConfig() # default config
@@ -31,3 +32,12 @@ ja_embedding = nn.Embedding(ja_dictionary_size, 512, padding_idx=1) # 512: defau
 # Build encoder and decoder objects
 encoder = TransformerEncoder(config, ja_dict, ja_embedding)
 decoder = TransformerDecoder(config, ja_dict, ja_embedding)
+
+data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data/combined_with_label.txt"), header=None, index_col=None, delimiter='\\|\\|')
+data_size = data_array.shape[0]
+dev_size = int(.1 * data_size)
+test_size = int(.1 * data_size)
+data_array = data_array.sample(frac=1)
+dev_data_array = data_array.loc[:dev_size]
+test_data_array = data_array.loc[dev_size:dev_size + test_size]
+train_data_array = data_array.loc[dev_size + test_size:]
