@@ -10,7 +10,7 @@ import tqdm
 import pandas as pd
 
 # Hyper parameters
-batch_size = 8
+batch_size = 16
 max_iterations = 100
 initial_learning_rate = .001
 max_sentence_length = 20
@@ -62,7 +62,7 @@ for iteration_number in range(0, max_iterations):
 
     sentence_tensors = []
     sentence_lengths = []
-    for sentence_label_pair in tqdm.tqdm(batch_array.iterrows(), total=batch_size):
+    for sentence_label_pair in batch_array.iterrows():
         # [JA], [EN], label
         sentence = ' '.join(sentence_label_pair[1].iloc[0])
         sentence_tensor = ja_dict.encode_line(sentence) # (len(sentence) + 1)
@@ -79,10 +79,7 @@ for iteration_number in range(0, max_iterations):
     # main forward pass
     encoder_dict = encoder(sentence_tensors, sentence_lengths)
     decoder_output = softmax_decoder_output(decoder(sentence_tensors, encoder_dict)[0])
-
-    print(decoder_output.view(-1, decoder_output.shape[2]), sentence_tensors.view(-1))
-
-    loss = criterion(decoder_output.view(-1, decoder_output.shape[2]), sentence_tensors.view(-1))
+    loss = criterion(decoder_output.view(-1, decoder_output.shape[2]), sentence_tensors.view(-1).long())
     loss.backward()
     optimiser.step()
 
