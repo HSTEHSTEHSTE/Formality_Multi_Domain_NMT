@@ -10,7 +10,7 @@ import tqdm
 import pandas as pd
 
 # Hyper parameters
-batch_size = 128
+batch_size = 8
 max_iterations = 100
 initial_learning_rate = .001
 max_sentence_length = 20
@@ -29,7 +29,7 @@ for line in tqdm.tqdm(data_file, total=575124):
     elements = line.split('||')
     training_triplet = (elements[0].strip(), elements[1].strip(), elements[2].replace('\n', ''))
     training_triplets.append(training_triplet)
-    ja_dict.encode_line(training_triplet[0], add_if_not_exist=True)
+    ja_dict.encode_line(' '.join(training_triplet[0]), add_if_not_exist=True)
 
 ja_dict.finalize()
 
@@ -55,6 +55,7 @@ train_data_array = data_array.loc[dev_size + test_size:]
 # Build criterion and optimiser
 criterion = torch.nn.NLLLoss()
 optimiser = torch.optim.Adam(list(encoder.parameters()) + list(decoder.parameters()), lr=initial_learning_rate, weight_decay=0)
+softmax_decoder_output = torch.nn.LogSoftmax(dim = 2)
 
 for iteration_number in range(0, max_iterations):
     batch_array = train_data_array.sample(n=batch_size)
@@ -63,7 +64,7 @@ for iteration_number in range(0, max_iterations):
     sentence_lengths = []
     for sentence_label_pair in tqdm.tqdm(batch_array.iterrows(), total=batch_size):
         # [JA], [EN], label
-        sentence = sentence_label_pair[1].iloc[0]
+        sentence = ' '.join(sentence_label_pair[1].iloc[0])
         sentence_tensor = ja_dict.encode_line(sentence) # (len(sentence) + 1)
         sentence_lengths.append(min(max_sentence_length, sentence_tensor.shape[0]))
         sentence_tensors.append(F.pad(sentence_tensor, (0, max_sentence_length - sentence_tensor.shape[0]), value = ja_dict.pad())[:max_sentence_length]) # (max_sentence_length)
@@ -77,5 +78,12 @@ for iteration_number in range(0, max_iterations):
 
     # main forward pass
     encoder_dict = encoder(sentence_tensors, sentence_lengths)
-    decoder_output = decoder(sentence_tensors, encoder_dict)[0]
+    decoder_output = softmax_decoder_output(decoder(sentence_tensors, encoder_dict)[0])
 
+    print(decoder_output.view(-1, decoder_output.shape[2]), sentence_tensors.view(-1))
+
+    loss = criterion(decoder_output.view(-1, decoder_output.shape[2]), sentence_tensors.view(-1))
+    loss.backward()
+    optimiser.step()
+
+    print(loss.item())
