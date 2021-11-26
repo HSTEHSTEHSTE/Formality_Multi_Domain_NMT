@@ -6,11 +6,12 @@ import math
 class TransformerEncoder(nn.Module):
     """Transformer encoder"""
 
-    def __init__(self, input_size, d_model, nlayers, dropout = .1):
+    def __init__(self, input_size, d_model, nlayers, pad_index = -1, dropout = .1):
         super(TransformerEncoder, self).__init__()
         self.input_size = input_size
         self.d_model = d_model
         self.nlayers = nlayers
+        self.pad_index = pad_index
         self.dropout = dropout
         self.embedder = nn.Embedding(num_embeddings=self.input_size, embedding_dim=self.d_model)
         self.position_encoder = PositionalEncoding(d_model=self.d_model, dropout=self.dropout)
@@ -18,10 +19,14 @@ class TransformerEncoder(nn.Module):
         self.transformer_encoder_layer = nn.TransformerEncoderLayer(d_model=self.d_model, dropout=self.dropout, nhead=8, batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(self.transformer_encoder_layer, num_layers=self.nlayers)
 
+    def generate_pad_mask(self, input):
+        return (input - self.pad_index < .5)
+
     def forward(self, input):
         input_embedded = self.embedder(input)
+        input_pad_mask = self.generate_pad_mask(input)
         input_embedded = self.position_encoder(input_embedded)
-        output = self.transformer_encoder(input_embedded)
+        output = self.transformer_encoder(input_embedded, src_key_padding_mask=input_pad_mask)
         return output
 
 class TransformerDecoder(nn.Module):
@@ -49,7 +54,7 @@ class TransformerDecoder(nn.Module):
         target_embedded = self.embedder(target)
         target_embedded = self.position_encoder(target_embedded)
         output_embedded = self.transformer_decoder(target_embedded, memory, tgt_mask=target_mask)
-        output = self.decoder(output_embedded)
+        output = self.decoder(output_embedded) # (batch_size, target.shape[1], self.d_model)
         return output
 
 class PositionalEncoding(nn.Module):
