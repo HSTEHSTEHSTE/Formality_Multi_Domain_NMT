@@ -1,22 +1,23 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from fairseq.models.transformer.transformer_encoder import TransformerEncoder
-from fairseq.models.transformer.transformer_decoder import TransformerDecoder
+import model
 from fairseq.models.transformer.transformer_config import TransformerConfig
 from fairseq.data.dictionary import Dictionary
 import os
 import tqdm
 import pandas as pd
+import nltk
 
 # Hyper parameters
 batch_size = 64
 dev_batch_size = 64
-max_iterations = 1000
-initial_learning_rate = .001
-lr_decay = .9
+max_iterations = 10000
+initial_learning_rate = .1
+lr_decay = .5
 lr_threshold = .00001
-print_every = 2
+print_every = 100
+embed_dim = 512
 max_sentence_length = 20
 use_gpu = True
 device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
@@ -40,11 +41,11 @@ ja_dict.finalize()
 # Build word embedding
 # Use naive pytorch embedding
 ja_dictionary_size = len(ja_dict)
-ja_embedding = nn.Embedding(ja_dictionary_size, 512, padding_idx=1) # 512: default embed_dim; 1: default pad value
+ja_embedding = nn.Embedding(ja_dictionary_size, embed_dim, padding_idx=1) # 1: default pad value
 
 # Build encoder and decoder objects
-encoder = TransformerEncoder(config, ja_dict, ja_embedding).to(device=device)
-decoder = TransformerDecoder(config, ja_dict, ja_embedding).to(device=device)
+encoder = model.TransformerEncoder(ja_dictionary_size, embed_dim, 6).to(device=device)
+decoder = model.TransformerDecoder(ja_dictionary_size, embed_dim, 6, device).to(device=device)
 
 # Load data
 data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data/combined_with_label.txt"), header=None, index_col=None, delimiter='\\|\\|').dropna()
@@ -85,20 +86,25 @@ for iteration_number in range(0, max_iterations):
     optimiser.zero_grad()
 
     # main forward pass
-    encoder_dict = encoder(sentence_tensors, sentence_lengths)
-    decoder_output = softmax_decoder_output(decoder(sentence_tensors, encoder_dict)[0])
-    loss = criterion(decoder_output.view(-1, decoder_output.shape[2]), sentence_tensors.view(-1).long())
+    memory = encoder(sentence_tensors)
+    decoder_output = softmax_decoder_output(decoder(sentence_tensors, memory))
+    loss = torch.tensor(0.).to(device=device)
+    for index, sentence in enumerate(decoder_output):
+        for word_index, word in enumerate(sentence[:sentence_lengths[index]]):
+            loss += criterion(word, sentence_tensors[index][word_index].long())
+    total_loss += loss.item()
     loss.backward()
     optimiser.step()
-    total_loss += loss.item()
 
     # load dev data
     dev_batch_array = dev_data_array.sample(n=dev_batch_size)
     dev_sentence_tensors = []
     dev_sentence_lengths = []
+    refs = []
     for sentence_label_pair in dev_batch_array.iterrows():
         # [JA], [EN], label
         dev_sentence = ' '.join(sentence_label_pair[1].iloc[0])
+        refs.append(list(sentence_label_pair[1].iloc[0]))
         dev_sentence_tensor = ja_dict.encode_line(dev_sentence) # (len(sentence) + 1)
         dev_sentence_lengths.append(min(max_sentence_length, dev_sentence_tensor.shape[0]))
         dev_sentence_tensors.append(F.pad(dev_sentence_tensor, (0, max_sentence_length - dev_sentence_tensor.shape[0]), value = ja_dict.pad())[:max_sentence_length]) # (max_sentence_length)
@@ -112,12 +118,14 @@ for iteration_number in range(0, max_iterations):
     optimiser.zero_grad()
 
     # dev forward pass
-    encoder_dict = encoder(dev_sentence_tensors, dev_sentence_lengths)
-    decoder_output = softmax_decoder_output(decoder(dev_sentence_tensors, encoder_dict)[0])
-    loss = criterion(decoder_output.view(-1, decoder_output.shape[2]), sentence_tensors.view(-1).long())
+    memory = encoder(dev_sentence_tensors)
+    decoder_output = softmax_decoder_output(decoder(dev_sentence_tensors, memory))
+    loss = torch.tensor(0.).to(device=device)
+    for index, sentence in enumerate(decoder_output):
+        for word_index, word in enumerate(sentence[:dev_sentence_lengths[index]]):
+            loss += criterion(word, dev_sentence_tensors[index][word_index].long())
 
     total_dev_loss += loss.item()
-
 
     # calculate dev loss, update learning rate
     if (iteration_number + 1) % print_every == 0:
@@ -128,14 +136,27 @@ for iteration_number in range(0, max_iterations):
         print("Dev loss is ", dev_loss)
         total_dev_loss = 0
         
-        # update learning rate
-        if previous_loss is not None and previous_loss < dev_loss:
-            lr_new = lr * lr_decay
-            print("Dev loss increased. Reducing learning rate from ", lr, " to ", lr_new)
-            lr = lr_new
-            for param_group in optimiser.param_groups:
-                param_group["lr"] = lr
-        previous_loss = dev_loss
+        # # update learning rate
+        # if previous_loss is not None and previous_loss < dev_loss:
+        #     lr_new = lr * lr_decay
+        #     print("Dev loss increased. Reducing learning rate from ", lr, " to ", lr_new)
+        #     lr = lr_new
+        #     for param_group in optimiser.param_groups:
+        #         param_group["lr"] = lr
+        # previous_loss = dev_loss
+
+        # calculate dev bleu score
+        hyps = []
+        for index, dev_sentence in enumerate(decoder_output):
+            sentence_characters = ja_dict.string(torch.argmax(dev_sentence, dim=1))
+            hyps.append(list(sentence_characters.replace(' ', '')))
+
+            # for char in dev_sentence:
+            #     print(ja_dict.symbols[torch.argmax(char)])
+            sentence_characters = ja_dict.string(torch.argmax(dev_sentence, dim=1))
+            # print(sentence_characters)
+        print(nltk.translate.bleu_score.corpus_bleu(refs, hyps))
 
         if lr < lr_threshold:
             break
+

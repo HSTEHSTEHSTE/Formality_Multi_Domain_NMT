@@ -6,7 +6,7 @@ import math
 class TransformerEncoder(nn.Module):
     """Transformer encoder"""
 
-    def __init__(self, input_size, d_model, nlayers, dropout = .5):
+    def __init__(self, input_size, d_model, nlayers, dropout = .1):
         super(TransformerEncoder, self).__init__()
         self.input_size = input_size
         self.d_model = d_model
@@ -15,7 +15,7 @@ class TransformerEncoder(nn.Module):
         self.embedder = nn.Embedding(num_embeddings=self.input_size, embedding_dim=self.d_model)
         self.position_encoder = PositionalEncoding(d_model=self.d_model, dropout=self.dropout)
 
-        self.transformer_encoder_layer = nn.TransformerEncoderLayer(d_model=self.d_model, dropout=self.dropout)
+        self.transformer_encoder_layer = nn.TransformerEncoderLayer(d_model=self.d_model, dropout=self.dropout, nhead=8, batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(self.transformer_encoder_layer, num_layers=self.nlayers)
 
     def forward(self, input):
@@ -27,24 +27,25 @@ class TransformerEncoder(nn.Module):
 class TransformerDecoder(nn.Module):
     """Transformer decoder"""
 
-    def __init__(self, target_size, d_model, n_layers, dropout = .5):
+    def __init__(self, target_size, d_model, n_layers, device, dropout = .1):
         super(TransformerDecoder, self).__init__()
         self.target_size = target_size
         self.d_model = d_model
         self.n_layers = n_layers
         self.dropout = dropout
+        self.device = device
         self.embedder = nn.Embedding(num_embeddings=self.target_size, embedding_dim=self.d_model)
         self.position_encoder = PositionalEncoding(d_model=self.d_model, dropout=self.dropout)
         self.decoder = nn.Linear(in_features=self.d_model, out_features=self.target_size)
 
-        self.transformer_decoder_layer = nn.TransformerDecoderLayer(d_model=self.d_model, dropout=self.dropout)
+        self.transformer_decoder_layer = nn.TransformerDecoderLayer(d_model=self.d_model, dropout=self.dropout, nhead=8, batch_first=True)
         self.transformer_decoder = nn.TransformerDecoder(self.transformer_decoder_layer, num_layers=self.n_layers)
 
-    def generate_mask(self):
-        return torch.triu(torch.ones(self.d_model, self.d_model) * float('-inf'), diagonal=1)
+    def generate_mask(self, size):
+        return torch.triu(torch.ones(size, size) * float('-inf'), diagonal=1).to(device=self.device)
 
     def forward(self, target, memory):
-        target_mask = self.generate_mask()
+        target_mask = self.generate_mask(target.shape[1])
         target_embedded = self.embedder(target)
         target_embedded = self.position_encoder(target_embedded)
         output_embedded = self.transformer_decoder(target_embedded, memory, tgt_mask=target_mask)
