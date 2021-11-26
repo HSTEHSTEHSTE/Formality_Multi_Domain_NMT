@@ -49,8 +49,8 @@ ja_dictionary_size = len(ja_dict)
 ja_embedding = nn.Embedding(ja_dictionary_size, embed_dim, padding_idx=1) # 1: default pad value
 
 # Build encoder and decoder objects
-encoder = model.TransformerEncoder(ja_dictionary_size, embed_dim, 6, device=device, pad_index=ja_dict.pad()).to(device=device)
-decoder = model.TransformerDecoder(ja_dictionary_size, embed_dim, 6, device, pad_index=ja_dict.pad()).to(device=device)
+encoder = model.TransformerEncoder(ja_dictionary_size, embed_dim, 1, device=device, pad_index=ja_dict.pad()).to(device=device)
+decoder = model.TransformerDecoder(ja_dictionary_size, embed_dim, 1, device, pad_index=ja_dict.pad()).to(device=device)
 
 # Load data
 data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data/combined_with_label.txt"), header=None, index_col=None, delimiter='\\|\\|').dropna()
@@ -167,7 +167,8 @@ for iteration_number in range(0, max_iterations):
 
             # for char in dev_sentence:
             #     print(ja_dict.symbols[torch.argmax(char)])
-            print(sentence_characters)
+            print(hyps[index])
+            print(refs[index])
         print(nltk.translate.bleu_score.corpus_bleu(refs, hyps))
 
         if lr < lr_threshold:
