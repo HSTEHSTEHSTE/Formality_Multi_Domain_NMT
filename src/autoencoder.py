@@ -38,7 +38,7 @@ for line in tqdm.tqdm(data_file, total=575124):
     elements = line.split('||')
     training_triplet = (elements[0].replace(' ', ''), elements[1].strip(), elements[2].replace('\n', ''))
     training_triplets.append(training_triplet)
-    # ja_dict.encode_line(' '.join(training_triplet[0]), add_if_not_exist=True, append_eos=False)
+    # ja_dict.encode_line(' '.join(training_triplet[0]), add_if_not_exist=True, append_eos=True)
     ja_dict.encode_line(training_triplet[0], line_tokenizer=line_tokeniser, add_if_not_exist=True)
 
 ja_dict.finalize()
@@ -80,7 +80,7 @@ for iteration_number in range(0, max_iterations):
         # [JA], [EN], label
         # sentence = ' '.join(sentence_label_pair[1].iloc[0])
         sentence = tokeniser.parse(sentence_label_pair[1].iloc[0].replace(' ', ''))
-        sentence_tensor = ja_dict.encode_line(sentence, append_eos=False) # (len(sentence) + 1)
+        sentence_tensor = ja_dict.encode_line(sentence, append_eos=True) # (len(sentence) + 1)
         sentence_tensor = torch.cat([torch.tensor([ja_dict.bos()]), sentence_tensor])
         sentence_lengths.append(min(max_sentence_length, sentence_tensor.shape[0]))
         sentence_tensors.append(F.pad(sentence_tensor, (0, max_sentence_length - sentence_tensor.shape[0]), value = ja_dict.pad())[:max_sentence_length]) # (max_sentence_length)
@@ -113,8 +113,8 @@ for iteration_number in range(0, max_iterations):
         # [JA], [EN], label
         # dev_sentence = ' '.join(sentence_label_pair[1].iloc[0])
         dev_sentence = tokeniser.parse(sentence_label_pair[1].iloc[0].replace(' ', ''))
-        refs.append(list(sentence_label_pair[1].iloc[0]))
-        dev_sentence_tensor = ja_dict.encode_line(dev_sentence, append_eos=False) # (len(sentence) + 1)
+        refs.append([dev_sentence.split()])
+        dev_sentence_tensor = ja_dict.encode_line(dev_sentence, append_eos=True) # (len(sentence) + 1)
         dev_sentence_tensor = torch.cat([torch.tensor([ja_dict.bos()]), dev_sentence_tensor])
         dev_sentence_lengths.append(min(max_sentence_length, dev_sentence_tensor.shape[0]))
         dev_sentence_tensors.append(F.pad(dev_sentence_tensor, (0, max_sentence_length - dev_sentence_tensor.shape[0]), value = ja_dict.pad())[:max_sentence_length]) # (max_sentence_length)
@@ -163,7 +163,7 @@ for iteration_number in range(0, max_iterations):
         hyps = []
         for index, dev_sentence in enumerate(decoder_output):
             sentence_characters = ja_dict.string(dev_sentence)
-            hyps.append(list(sentence_characters.replace(' ', '')))
+            hyps.append(sentence_characters.split())
 
             # for char in dev_sentence:
             #     print(ja_dict.symbols[torch.argmax(char)])
