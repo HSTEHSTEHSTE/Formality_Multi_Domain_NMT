@@ -46,7 +46,6 @@ SOS_index = 0
 EOS_index = 1
 MAX_LENGTH = 15
 
-punctuations = set(['.', '?', '!', ':', '[', ']', '(', ')', ';', ',', '-', '=', '@', '#', '$', '%', '^', '&', '*'])
 class JpVocab:
     """ This class handles the mapping between the words and their indicies
     """
@@ -59,7 +58,6 @@ class JpVocab:
 
     def add_sentence(self, sentence):
         for word in sentence:
-            #print(word)
             self._add_word(word)
 
     def _add_word(self, word):
@@ -83,19 +81,6 @@ class Vocab:
 
     def add_sentence(self, sentence):
         for word in sentence.split(' '):
-            #print(word)
-            if word and word[0] in punctuations:
-                self._add_word(word[0])
-                if len(word) > 1:
-                    word = word[1:]
-                else:
-                    continue
-            if word and word[-1] in punctuations:
-                self._add_word(word[-1])
-                if len(word) > 1:
-                    word = word[:-1]
-                else:
-                    continue
             self._add_word(word)
 
     def _add_word(self, word):
@@ -130,20 +115,18 @@ def split_lines(input_file):
 def make_vocabs(src_lang_code, tgt_lang_code, corpus_file):
     """ Creates the vocabs for each of the langues based on the training corpus.
     """
-    src_vocab = JpVocab(src_lang_code)
-    tgt_vocab = Vocab(tgt_lang_code)
+    src_vocab = Vocab(src_lang_code)
+    tgt_vocab = JpVocab(tgt_lang_code)
 
     triplets = split_lines(corpus_file)
     train_triplets = triplets[:8*len(triplets)//10]
 
     for triplet in train_triplets:
-        src_vocab.add_sentence(triplet[0])
-        tgt_vocab.add_sentence(triplet[1])
+        src_vocab.add_sentence(triplet[1])
+        tgt_vocab.add_sentence(triplet[0])
 
     logging.info('%s (src) vocab size: %s', src_vocab.lang_code, src_vocab.n_words)
     logging.info('%s (tgt) vocab size: %s', tgt_vocab.lang_code, tgt_vocab.n_words)
-
-    #print(tgt_vocab.word2count)
 
     return src_vocab, tgt_vocab
 
@@ -168,18 +151,6 @@ def tensor_from_sentence(vocab, sentence):
     indexes = []
     for word in sentence.split():
         try:
-            if word[0] in punctuations:
-                indexes.append(vocab.word2index[word[0]])
-                if len(word) > 1:
-                    word = word[1:]
-                else:
-                    continue
-            if word[-1] in punctuations:
-                indexes.append(vocab.word2index[word[-1]])
-                if len(word) > 1:
-                    word = word[:-1]
-                else:
-                    continue 
             indexes.append(vocab.word2index[word])
         except KeyError:
             pass
@@ -194,8 +165,8 @@ def tensors_from_triplet(src_vocab, tgt_vocab, triplets):
     input_tensors = []
     target_tensors = []
     for triplet in triplets:
-      current_input_tensor = tensor_from_jp_sentence(src_vocab, triplet[0])
-      current_target_tensor = tensor_from_sentence(tgt_vocab, triplet[1])
+      current_input_tensor = tensor_from_jp_sentence(src_vocab, triplet[1])
+      current_target_tensor = tensor_from_sentence(tgt_vocab, triplet[0])
       input_tensors.append(F.pad(current_input_tensor, (0, 0, 0, MAX_LENGTH - current_input_tensor.size(0)), value = 1))
       target_tensors.append(F.pad(current_target_tensor, (0, 0, 0, MAX_LENGTH - current_target_tensor.size(0)), value = 1))
     input_tensor = torch.stack(input_tensors, dim = 1)
@@ -539,7 +510,7 @@ def translate(encoder, decoder, sentence, src_vocab, tgt_vocab, max_length=MAX_L
 def translate_sentences(encoder, decoder, triplets, src_vocab, tgt_vocab, max_num_sentences=None, max_length=MAX_LENGTH):
     output_sentences = []
     for triplet in triplets[:max_num_sentences]:
-        output_words, attentions = translate(encoder, decoder, triplet[0], src_vocab, tgt_vocab)
+        output_words, attentions = translate(encoder, decoder, triplet[1], src_vocab, tgt_vocab)
         output_sentence = ' '.join(output_words)
         output_sentences.append(output_sentence)
     return output_sentences
@@ -553,9 +524,9 @@ def translate_sentences(encoder, decoder, triplets, src_vocab, tgt_vocab, max_nu
 def translate_random_sentence(encoder, decoder, triplets, src_vocab, tgt_vocab, n=1):
     for i in range(n):
         triplet = random.choice(triplets)
-        print('>', triplet[0])
-        print('=', triplet[1])
-        output_words, attentions = translate(encoder, decoder, triplet[0], src_vocab, tgt_vocab)
+        print('>', triplet[1])
+        print('=', triplet[0])
+        output_words, attentions = translate(encoder, decoder, triplet[1], src_vocab, tgt_vocab)
         output_sentence = ' '.join(output_words)
         print('<', output_sentence)
         print('')
@@ -623,7 +594,7 @@ def main():
                     help='hidden size of encoder/decoder, also word vector size')
     ap.add_argument('--n_iters', default=100000, type=int,
                     help='total number of examples to train on')
-    ap.add_argument('--print_every', default=5000, type=int,
+    ap.add_argument('--print_every', default=1000, type=int,
                     help='print loss info every this many training examples')
     ap.add_argument('--batch_size', default=64, type=int,
                     help='set batch_size')
@@ -631,9 +602,9 @@ def main():
                     help='write out checkpoint every this many training examples')
     ap.add_argument('--initial_learning_rate', default=0.0005, type=int,
                     help='initial learning rate')
-    ap.add_argument('--src_lang', default='jp',
+    ap.add_argument('--src_lang', default='en',
                     help='Source (input) language code, e.g. "jp"')
-    ap.add_argument('--tgt_lang', default='en',
+    ap.add_argument('--tgt_lang', default='jp',
                     help='Source (input) language code, e.g. "en"')
     ap.add_argument('--corpus_file', default='../../data/combined_with_label.txt',
                     help='training file. each line should have a source sentence,' +
@@ -648,7 +619,7 @@ def main():
     #                 help='test file. each line should have a source sentence,' +
     #                      'followed by "|||", followed by a target sentence' +
     #                      ' (for test, target is ignored)')
-    ap.add_argument('--out_file', default='out.txt',
+    ap.add_argument('--out_file', default='ENtoJP_out.txt',
                     help='output file for test translations')
     ap.add_argument('--load_checkpoint', nargs=1,
                     help='checkpoint file to start from')
@@ -753,7 +724,7 @@ def main():
             translate_random_sentence(encoder, decoder, dev_triplets, src_vocab, tgt_vocab, n=2)
             translated_sentences = translate_sentences(encoder, decoder, dev_triplets, src_vocab, tgt_vocab)
 
-            references = [[clean(triplet[1]).split(), ] for triplet in dev_triplets[:len(translated_sentences)]]
+            references = [[x for x in clean(triplet[0])] for triplet in dev_triplets[:len(translated_sentences)]]
             candidates = [clean(sent).split() for sent in translated_sentences]
             dev_bleu = corpus_bleu(references, candidates)
             logging.info('Dev BLEU score: %.2f', dev_bleu)
