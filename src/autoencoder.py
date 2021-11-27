@@ -59,9 +59,9 @@ data_size = data_array.shape[0]
 dev_size = int(.1 * data_size)
 test_size = int(.1 * data_size)
 data_array = data_array.sample(frac=1)
-dev_data_array = data_array.loc[:dev_size]
-test_data_array = data_array.loc[dev_size:dev_size + test_size]
-train_data_array = data_array.loc[dev_size + test_size:]
+dev_data_array = data_array.iloc[:dev_size]
+test_data_array = data_array.iloc[dev_size:(dev_size + test_size)]
+train_data_array = data_array.iloc[(dev_size + test_size):]
 
 # Build criterion and optimiser
 criterion = torch.nn.NLLLoss(ignore_index=1)
@@ -176,7 +176,6 @@ for iteration_number in range(0, max_iterations):
             break
 
 # do one pass over the test corpus
-
 
 refs = []
 hyps = []
