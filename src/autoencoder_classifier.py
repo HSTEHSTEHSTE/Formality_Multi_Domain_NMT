@@ -52,7 +52,7 @@ ja_embedding = nn.Embedding(ja_dictionary_size, embed_dim, padding_idx=1) # 1: d
 # Build encoder, decoder and classifier objects
 encoder = model.TransformerEncoder(ja_dictionary_size, embed_dim, 1, device=device, pad_index=ja_dict.pad()).to(device=device)
 decoder = model.TransformerDecoder(ja_dictionary_size, embed_dim, 1, device, pad_index=ja_dict.pad()).to(device=device)
-classifier = model.LinearDecoder(embed_dim, 2)
+classifier = model.LinearDecoder(embed_dim * max_sentence_length, 2).to(device=device)
 
 # Load data
 data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data/combined_with_label.txt"), header=None, index_col=None, delimiter='\\|\\|').dropna()
@@ -78,6 +78,7 @@ for iteration_number in range(0, max_iterations):
 
     sentence_tensors = []
     sentence_lengths = []
+    formality_tensors = []
     for sentence_label_pair in batch_array.iterrows():
         # [JA], [EN], label
         # sentence = ' '.join(sentence_label_pair[1].iloc[0])
@@ -87,20 +88,26 @@ for iteration_number in range(0, max_iterations):
         sentence_lengths.append(min(max_sentence_length, sentence_tensor.shape[0]))
         sentence_tensors.append(F.pad(sentence_tensor, (0, max_sentence_length - sentence_tensor.shape[0]), value = ja_dict.pad())[:max_sentence_length]) # (max_sentence_length)
 
+        formality_tensors.append(int(sentence_label_pair[1].iloc[2]))
+
     sentence_tensors = torch.stack(sentence_tensors, dim=0).long().to(device=device) # (batch_size, max_sentence_length + 1)
     sentence_lengths = torch.tensor(sentence_lengths).to(device=device) # (batch_size)
+    formality_tensors = torch.tensor(formality_tensors).to(device=device).long() # (batch_size)
 
     encoder.train()
     decoder.train()
+    classifier.train()
     optimiser.zero_grad()
 
     # main forward pass
     loss = torch.tensor(0.).to(device=device)
     memory, pad_mask = encoder(sentence_tensors)
+    classifier_output = classifier(memory.view(batch_size, -1))
 
     # teacher forcing
     decoder_output = softmax_decoder_output(decoder(sentence_tensors[:, :-1], memory, pad_mask))
     loss = criterion(decoder_output.view(-1, decoder_output.shape[2]), sentence_tensors[:, 1:].reshape(-1).long())
+    loss += criterion(classifier_output, formality_tensors)
 
     total_loss += loss.item()
     loss.backward()
@@ -110,6 +117,7 @@ for iteration_number in range(0, max_iterations):
     dev_batch_array = dev_data_array.sample(n=dev_batch_size)
     dev_sentence_tensors = []
     dev_sentence_lengths = []
+    dev_formality_tensors = []
     refs = []
     for sentence_label_pair in dev_batch_array.iterrows():
         # [JA], [EN], label
@@ -120,18 +128,23 @@ for iteration_number in range(0, max_iterations):
         dev_sentence_tensor = torch.cat([torch.tensor([ja_dict.bos()]), dev_sentence_tensor])
         dev_sentence_lengths.append(min(max_sentence_length, dev_sentence_tensor.shape[0]))
         dev_sentence_tensors.append(F.pad(dev_sentence_tensor, (0, max_sentence_length - dev_sentence_tensor.shape[0]), value = ja_dict.pad())[:max_sentence_length]) # (max_sentence_length)
+        
+        dev_formality_tensors.append(int(sentence_label_pair[1].iloc[2]))
     
     dev_sentence_tensors = torch.stack(dev_sentence_tensors, dim=0).long().to(device=device) # (batch_size, max_sentence_length)
     dev_sentence_lengths = torch.tensor(dev_sentence_lengths).to(device=device) # (batch_size)
+    dev_formality_tensors = torch.tensor(dev_formality_tensors).to(device=device).long() # (batch_size)
 
     encoder.eval()
     decoder.eval()
+    classifier.eval()
 
     optimiser.zero_grad()
 
     # dev forward pass
     loss = torch.tensor(0.).to(device=device)
     memory, pad_mask = encoder(dev_sentence_tensors)
+    dev_classifier_output = classifier(memory.view(dev_batch_size, -1))
     decoder_output = torch.tensor(ja_dict.bos()).unsqueeze(0).long().repeat(batch_size, 1).to(device=device) # (batch_size, 1)
     has_reached_eos = torch.ones([batch_size, 1]).to(device=device) # (batch_size, 1)
     eoses = torch.tensor(ja_dict.eos()).unsqueeze(0).long().repeat(batch_size, 1).to(device=device) # (batch_size, 1)
@@ -141,6 +154,7 @@ for iteration_number in range(0, max_iterations):
         has_reached_eos = has_reached_eos * ((dev_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
         loss += criterion(next_output[:, -1, :], dev_sentence_tensors[:, output_index].long())
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
+    loss += criterion(dev_classifier_output, dev_formality_tensors)
     total_dev_loss += loss.item()
 
     # calculate dev loss, update learning rate
@@ -163,14 +177,18 @@ for iteration_number in range(0, max_iterations):
 
         # calculate dev bleu score
         hyps = []
+        formality = torch.argmax(classifier_output, dim=1)
+        formality_accuracy = torch.div(torch.sum((formality == dev_formality_tensors).float()), formality.shape[0])
+        print("Dev formality accuracy: ", formality_accuracy.item())
+
         for index, dev_sentence in enumerate(decoder_output):
             sentence_characters = ja_dict.string(dev_sentence)
             hyps.append(sentence_characters.split())
 
-            # for char in dev_sentence:
-            #     print(ja_dict.symbols[torch.argmax(char)])
             # print(hyps[index])
             # print(refs[index][0])
+            
+            # print("Formality: ", int(formality[index]), ref_formalities[index])
         print("Dev BLEU score: ", nltk.translate.bleu_score.corpus_bleu(refs, hyps))
 
         if lr < lr_threshold:
@@ -180,11 +198,13 @@ for iteration_number in range(0, max_iterations):
 
 refs = []
 hyps = []
+total_accurate_labels = 0
 for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iterations):
     # load test data
     test_batch_array = test_data_array.sample(n=dev_batch_size)
     test_sentence_tensors = []
     test_sentence_lengths = []
+    test_formality_tensors = []
     total_test_loss = 0.
     for sentence_label_pair in test_batch_array.iterrows():
         # [JA], [EN], label
@@ -196,17 +216,22 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
         test_sentence_lengths.append(min(max_sentence_length, test_sentence_tensor.shape[0]))
         test_sentence_tensors.append(F.pad(test_sentence_tensor, (0, max_sentence_length - test_sentence_tensor.shape[0]), value = ja_dict.pad())[:max_sentence_length]) # (max_sentence_length)
 
+        test_formality_tensors.append(int(sentence_label_pair[1].iloc[2]))
+
     test_sentence_tensors = torch.stack(test_sentence_tensors, dim=0).long().to(device=device) # (batch_size, max_sentence_length)
     test_sentence_lengths = torch.tensor(test_sentence_lengths).to(device=device) # (batch_size)
+    test_formality_tensors = torch.tensor(test_formality_tensors).to(device=device).long() # (batch_size)
 
     encoder.eval()
     decoder.eval()
+    classifier.eval()
 
     optimiser.zero_grad()
 
     # test forward pass
     loss = torch.tensor(0.).to(device=device)
     memory, pad_mask = encoder(test_sentence_tensors)
+    test_classifier_output = classifier(memory.view(dev_batch_size, -1))
     decoder_output = torch.tensor(ja_dict.bos()).unsqueeze(0).long().repeat(batch_size, 1).to(device=device) # (batch_size, 1)
     has_reached_eos = torch.ones([batch_size, 1]).to(device=device) # (batch_size, 1)
     eoses = torch.tensor(ja_dict.eos()).unsqueeze(0).long().repeat(batch_size, 1).to(device=device) # (batch_size, 1)
@@ -216,15 +241,23 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
         has_reached_eos = has_reached_eos * ((test_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
         loss += criterion(next_output[:, -1, :], test_sentence_tensors[:, output_index].long())
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
+    loss += criterion(test_classifier_output, test_formality_tensors)
     total_test_loss += loss.item()
 
     # Log output sentences
     for index, test_sentence in enumerate(decoder_output):
         sentence_characters = ja_dict.string(test_sentence)
         hyps.append(sentence_characters.split())
+    test_formalities = torch.argmax(test_classifier_output, dim=1)
+    formality_accuracy = torch.sum((test_formalities == test_formality_tensors).float())
+    total_accurate_labels += formality_accuracy.item()
 
-test_loss = total_test_loss / (test_iterations * dev_batch_size)
+test_loss = total_test_loss / test_iterations
 print("Test loss is ", test_loss)
+
+# Calculate labelling accuracy:
+accuracy = total_accurate_labels / (test_iterations * dev_batch_size)
+print("Formality label accuracy is ", accuracy)
 
 # Calculate BLEU score
 print("Test BLEU score: ", nltk.translate.bleu_score.corpus_bleu(refs, hyps))

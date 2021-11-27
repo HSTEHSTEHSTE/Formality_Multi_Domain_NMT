@@ -222,7 +222,7 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
         sentence_characters = ja_dict.string(test_sentence)
         hyps.append(sentence_characters.split())
 
-test_loss = total_test_loss / (test_iterations * dev_batch_size)
+test_loss = total_test_loss / test_iterations
 print("Test loss is ", test_loss)
 
 # Calculate BLEU score
