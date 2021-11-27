@@ -22,6 +22,7 @@ print_every = 10
 embed_dim = 256
 max_sentence_length = 15
 use_gpu = True
+translation_loss_weight = .1
 device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
 
 # Build config objects
@@ -106,7 +107,7 @@ for iteration_number in range(0, max_iterations):
 
     # teacher forcing
     decoder_output = softmax_decoder_output(decoder(sentence_tensors[:, :-1], memory, pad_mask))
-    loss = criterion(decoder_output.view(-1, decoder_output.shape[2]), sentence_tensors[:, 1:].reshape(-1).long())
+    loss = translation_loss_weight * criterion(decoder_output.view(-1, decoder_output.shape[2]), sentence_tensors[:, 1:].reshape(-1).long())
     loss += criterion(classifier_output, formality_tensors)
 
     total_loss += loss.item()
@@ -152,7 +153,7 @@ for iteration_number in range(0, max_iterations):
         next_output = softmax_decoder_output(decoder(decoder_output, memory, pad_mask))
         # has_reached_eos = has_reached_eos * ((torch.argmax(next_output[:, -1, :].unsqueeze(1), dim = 2) - eoses) > .5)
         has_reached_eos = has_reached_eos * ((dev_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
-        loss += criterion(next_output[:, -1, :], dev_sentence_tensors[:, output_index].long())
+        loss += translation_loss_weight * criterion(next_output[:, -1, :], dev_sentence_tensors[:, output_index].long())
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
     loss += criterion(dev_classifier_output, dev_formality_tensors)
     total_dev_loss += loss.item()
@@ -239,7 +240,7 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
         next_output = softmax_decoder_output(decoder(decoder_output, memory, pad_mask))
         # has_reached_eos = has_reached_eos * ((torch.argmax(next_output[:, -1, :].unsqueeze(1), dim = 2) - eoses) > .5)
         has_reached_eos = has_reached_eos * ((test_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
-        loss += criterion(next_output[:, -1, :], test_sentence_tensors[:, output_index].long())
+        loss += translation_loss_weight * criterion(next_output[:, -1, :], test_sentence_tensors[:, output_index].long())
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
     loss += criterion(test_classifier_output, test_formality_tensors)
     total_test_loss += loss.item()

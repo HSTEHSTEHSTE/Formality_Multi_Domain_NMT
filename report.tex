@@ -116,8 +116,7 @@ Fortunately for us, this is a topic that had been studied previously by Feely et
 
 The authors identified verb suffixes and copulas as the keys for indentifying sentence formality, with short-form corresponding to informal sentences and long-form corresponding to formal ones. They published a conversion script which would identify and convert any informal verb suffixes into formal verb suffixes, and vice versa. There is a slight complication to this rule, which is that in Japanese there are situations which constrain the verb to be short-form, ie. when it forms part of a verb phrase that isn't the head of the sentence. Fortunately, Japanese is also a language which observes the SOV order, meaning that the final verb in a sentence is always the head verb and is never constrained to short form. As such, we can first perform sentence tokenisation and then use the long-short form of the final verb/copula in each sentence to determine its formality. There are some exceptions to this SOV structure, especially in the short-form, and especially involving the omission of the verb ``desu", (translated as ``to be"). Fortunately, in these cases, the final term is an adjective, which in Japanese also conjugate in a way that's distinguishable by politeness. 
 
-We thus from their script and make two important modifications. First we adapt their conversion script into a classificaiton script.
-We also take advantage of the fact that the formality level in a single document should remain the same. This observation can serve multiple purposes:
+We thus from their script and make two important modifications. First we adapt their conversion script into a classification script. We also take advantage of the fact that the formality level in a single document should remain the same. This observation can serve multiple purposes:
 
 \begin{enumerate}[label=\arabic*]
     \item A sanity check for the outputs of our script;
@@ -150,9 +149,9 @@ The other approach is to regard the problem as a two-class classification task. 
 
 The pre-trained model that we used was BertJapanese, developed by Masatoshi Suzuki at the Tohoku NLP lab and available in the transformers package by huggingface. The model converts a character-tokenised sentence into a $768$-dimension embedding which we use as the output for our classifier. Given the low dimensionality of our output, we choose the simplest model architecture possible: a linear layer and a log softmax output processing layer.
 
-In our experiments, we were able to achieve a labelling accuracy of $.8235$ for our generated formality label data. We observe similar movements in train and dev accuracy and loss during training, as well as comparable test accuracy compared to train and dev accuracy. Given the size of our test data set ($152576$), we believe our results are robust and not the result of any fortuitous statistical event.
+In our experiments, we were able to achieve a labelling accuracy of $.824$ for our generated formality label data. We observe similar movements in train and dev accuracy and loss during training, as well as comparable test accuracy compared to train and dev accuracy. Given the size of our test data set ($152576$), we believe our results are robust and not the result of any fortuitous statistical event.
 
-We compare those results to the ones we achieved from a BERT model based on word tokenisation. The accuracy was comparable to the character-based BERT, at $.8158$, however there was a substantial runtime reduction due to word-level tokenised sequences being shorter than character-level tokenised ones (average length of a Japanese word is around $2$ characters, however we would expect -a and did observe - speedup less than $50\%$ due to punctuations, numbers, non-Japanese characters, etc.). 
+We compare those results to the ones we achieved from a BERT model based on word tokenisation. The accuracy was comparable to the character-based BERT, at $.816$, however there was a substantial runtime reduction due to word-level tokenised sequences being shorter than character-level tokenised ones (average length of a Japanese word is around $2$ characters, however we would expect -a and did observe - speedup less than $50\%$ due to punctuations, numbers, non-Japanese characters, etc.). 
 
 \paragraph{Masking Decisive Verb/Copula}
 
@@ -180,11 +179,17 @@ This can be seen as a special case of the base translation model, except that th
 
 On our Japanese corpus, we were able to achieve a BLEU score of $.648$ when benchmarked against the original sentence.
 
-\subsection{Encoder-Decoder Decomposition}
+\subsection{Adding the Classifier}
 
 We decompose the usual encoder-decoder, using the encoder output as the basis for the formality labelling task. We build a separate classification module which takes encoder output as input and produces a formality label prediction. During training time, the loss function is constructed as a weighted sum of the translation loss and the formality label loss.
 
-\subsection{Formaltiy Autoencoder}
+\subsubsection{Autoencoder-Reconstructor plus Classifier}
+
+The choice of the hyper-parameter representing the weight of formality label loss in the total loss was initially chosen to be $.5$. We found that under such a split, the reconstruction performance was barely affected affected ($.632$ BLEU score, compared to $.648$ without classification loss). The classification accuracy at $.800$ is somewhat poor, comparable to what we achieved from the pre-trained encoder $.816$, but disappointing when considering that the encoder was being fine-tuned under this new setting.
+
+Is the translation task interfering with formality classification? We try to answer that question by turning off the decoder and training the model only on the classification loss. To our surprise, classification accuracy remained roughly the same with the decoder turned off, at $.799$. There are multiple potential reasons for such an observed effect: it is possible that the transformer encoder (or token embedding sequences in general) do not preserve sentence formality well; it could be that sentence formality is preserved, but not linearly and therefore our classifier was unable to extract that information; finally, the noise level of our procedurally-generated formality labels may have played a role in limiting the potential of any classifier trained on our data.
+
+\subsection{Formality Autoencoder}
 
 This setting can been seen extending the base autoencoder setting. Here we combine the encoder output with the output of the classifier and feed it back to a decoder which emits a sequence in the source language. We then measure how well the model preserves both the meaning and the formality of the original sentence.
 
@@ -202,11 +207,15 @@ We propose a number of different ways to evaluate the translation quality and th
 
 \subsection{Alignment BLEU score}
 
-We use the NLTK toolkit \cite{NLTK} to evaluate the BLEU score of our translations.
+We use the NLTK toolkit \cite{NLTK} to evaluate the BLEU score of our translations or sentence reconstructions. BLEU score is calculated as the proportion of n-gram overlaps between the hypothesis and the reference; due to only having a single sentence per training data point, such a score is not necessarily a good estimate of the model quality. It also doesn't have a good correlation with sentence formality.
 
 \subsection{Sentence Embedding Similarity}
 
 Comparing the embedding similarity of two sentences is hardly a trivial problem. In order to make our evaluation task tractable, we use a rather trivial construction where we define the embedding of a sentence as the average embedding of all word embeddings in the sentence. We then define sentence similarity as the dot product between the embedding of the two sentences. 
+
+\subsection{Formality Class accuracy}
+
+Our model's understanding of formality is undoubtedly one of the most important aspects of its performance. There are two different angles to formality: the model's classification of input formality, as well as the correctness of the formality of the sentence generated by our model with respect to the original sentence. The former is relatively straightforward to evaluate; the latter requires either running the output sentences on the procedural formality classification script we used to produce our corpora, or to have someone familiar with the Japanese (or Korean, English) language evaluate them manually.
 
 \newpage
 \printbibliography
