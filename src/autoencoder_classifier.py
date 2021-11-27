@@ -49,9 +49,10 @@ ja_dict.finalize()
 ja_dictionary_size = len(ja_dict)
 ja_embedding = nn.Embedding(ja_dictionary_size, embed_dim, padding_idx=1) # 1: default pad value
 
-# Build encoder and decoder objects
+# Build encoder, decoder and classifier objects
 encoder = model.TransformerEncoder(ja_dictionary_size, embed_dim, 1, device=device, pad_index=ja_dict.pad()).to(device=device)
 decoder = model.TransformerDecoder(ja_dictionary_size, embed_dim, 1, device, pad_index=ja_dict.pad()).to(device=device)
+classifier = model.LinearDecoder(embed_dim, 2)
 
 # Load data
 data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data/combined_with_label.txt"), header=None, index_col=None, delimiter='\\|\\|').dropna()
