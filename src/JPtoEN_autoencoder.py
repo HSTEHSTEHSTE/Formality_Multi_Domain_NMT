@@ -8,6 +8,7 @@ import os
 import tqdm
 import pandas as pd
 import nltk
+from nltk.tokenize import word_tokenize
 import MeCab
 
 # Hyper parameters
@@ -31,6 +32,11 @@ config = TransformerConfig() # default config
 tokeniser = MeCab.Tagger("-Owakati")
 def line_tokeniser(line):
     return tokeniser.parse(line).split()
+
+en_tokeniser = word_tokenize
+def en_line_tokeniser(line):
+    return en_tokeniser(line)  
+
 ja_dict = Dictionary()
 en_dict = Dictionary()
 data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data/combined_with_label.txt"), "r", encoding="utf-8")
@@ -42,7 +48,7 @@ for line in tqdm.tqdm(data_file, total=575124):
     training_triplets.append(training_triplet)
     # ja_dict.encode_line(' '.join(training_triplet[0]), add_if_not_exist=True, append_eos=True)
     ja_dict.encode_line(training_triplet[0], line_tokenizer=line_tokeniser, add_if_not_exist=True)
-    en_dict.encode_line(training_triplet[1], add_if_not_exist=True)
+    en_dict.encode_line(training_triplet[1], line_tokenizer=en_line_tokeniser, add_if_not_exist=True)
 
 ja_dict.finalize()
 en_dict.finalize()
@@ -91,7 +97,7 @@ for iteration_number in range(0, max_iterations):
         sentence_tensor = ja_dict.encode_line(sentence, append_eos=True) # (len(sentence) + 1)
         sentence_tensor = torch.cat([torch.tensor([ja_dict.bos()]), sentence_tensor])
         #en_sentence = [x for x in sentence_label_pair[1].iloc[1].split()]
-        en_sentence = sentence_label_pair[1].iloc[1]
+        en_sentence = ' '.join(en_tokeniser(sentence_label_pair[1].iloc[1]))
         en_sentence_tensor = en_dict.encode_line(en_sentence, append_eos=True)
         en_sentence_tensor = torch.cat([torch.tensor([en_dict.bos()]), en_sentence_tensor])
 
@@ -136,7 +142,7 @@ for iteration_number in range(0, max_iterations):
         #dev_sentence_lengths.append(min(max_sentence_length, dev_sentence_tensor.shape[0]))
         dev_sentence_tensors.append(F.pad(dev_sentence_tensor, (0, max_sentence_length - dev_sentence_tensor.shape[0]), value = ja_dict.pad())[:max_sentence_length]) # (max_sentence_length)
 
-        dev_en_sentence = sentence_label_pair[1].iloc[1]
+        dev_en_sentence = ' '.join(en_tokeniser(sentence_label_pair[1].iloc[1]))
         dev_en_sentence_tensor = en_dict.encode_line(dev_en_sentence, append_eos=True) # (len(sentence) + 1)
         dev_en_sentence_tensor = torch.cat([torch.tensor([en_dict.bos()]), dev_en_sentence_tensor])
         dev_en_sentence_tensors.append(F.pad(dev_en_sentence_tensor, (0, max_sentence_length - dev_en_sentence_tensor.shape[0]), value = en_dict.pad())[:max_sentence_length]) # (max_sentence_length)
@@ -222,7 +228,7 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
         #test_sentence_lengths.append(min(max_sentence_length, test_sentence_tensor.shape[0]))
         test_sentence_tensors.append(F.pad(test_sentence_tensor, (0, max_sentence_length - test_sentence_tensor.shape[0]), value = ja_dict.pad())[:max_sentence_length]) # (max_sentence_length)
 
-        test_en_sentence = sentence_label_pair[1].iloc[1]
+        test_en_sentence = ' '.join(en_tokeniser(sentence_label_pair[1].iloc[1]))
         test_en_sentence_tensor = en_dict.encode_line(test_en_sentence, append_eos=True) # (len(sentence) + 1)
         test_en_sentence_tensor = torch.cat([torch.tensor([en_dict.bos()]), test_en_sentence_tensor])
         test_en_sentence_tensors.append(F.pad(test_en_sentence_tensor, (0, max_sentence_length - test_en_sentence_tensor.shape[0]), value = en_dict.pad())[:max_sentence_length]) # (max_sentence_length)
