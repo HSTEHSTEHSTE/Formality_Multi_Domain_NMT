@@ -134,7 +134,7 @@ for iteration_number in range(0, max_iterations):
     refs = []
     for sentence_label_pair in dev_batch_array.iterrows():
         # [JA], [EN], label
-        refs.append([sentence_label_pair[1].iloc[1].split()])
+        refs.append(en_tokeniser(sentence_label_pair[1].iloc[1]))
 
         dev_sentence = tokeniser.parse(sentence_label_pair[1].iloc[0].replace(' ', ''))
         dev_sentence_tensor = ja_dict.encode_line(dev_sentence, append_eos=True) # (len(sentence) + 1)
