@@ -15,7 +15,7 @@ batch_size = 8
 dev_batch_size = 8
 max_iterations = 10000
 test_iterations = 1000
-initial_learning_rate = .002
+initial_learning_rate = .001
 lr_decay = .5
 lr_threshold = .00001
 print_every = 10
@@ -65,9 +65,9 @@ data_size = data_array.shape[0]
 dev_size = int(.1 * data_size)
 test_size = int(.1 * data_size)
 data_array = data_array.sample(frac=1)
-dev_data_array = data_array.loc[:dev_size]
-test_data_array = data_array.loc[dev_size:dev_size + test_size]
-train_data_array = data_array.loc[dev_size + test_size:]
+dev_data_array = data_array.iloc[:dev_size]
+test_data_array = data_array.iloc[dev_size:dev_size + test_size]
+train_data_array = data_array.iloc[dev_size + test_size:]
 
 # Build criterion and optimiser
 criterion = torch.nn.NLLLoss(ignore_index=1)
