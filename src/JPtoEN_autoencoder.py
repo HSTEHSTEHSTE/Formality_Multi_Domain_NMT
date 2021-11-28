@@ -82,18 +82,26 @@ for iteration_number in range(0, max_iterations):
     batch_array = train_data_array.sample(n=batch_size)
 
     sentence_tensors = []
-    sentence_lengths = []
+    #sentence_lengths = []
+    en_sentence_tensors = []
     for sentence_label_pair in batch_array.iterrows():
         # [JA], [EN], label
         # sentence = ' '.join(sentence_label_pair[1].iloc[0])
         sentence = tokeniser.parse(sentence_label_pair[1].iloc[0].replace(' ', ''))
         sentence_tensor = ja_dict.encode_line(sentence, append_eos=True) # (len(sentence) + 1)
         sentence_tensor = torch.cat([torch.tensor([ja_dict.bos()]), sentence_tensor])
-        sentence_lengths.append(min(max_sentence_length, sentence_tensor.shape[0]))
+        #en_sentence = [x for x in sentence_label_pair[1].iloc[1].split()]
+        en_sentence = sentence_label_pair[1].iloc[1]
+        en_sentence_tensor = en_dict.encode_line(en_sentence, append_eos=True)
+        en_sentence_tensor = torch.cat([torch.tensor([en_dict.bos()]), en_sentence_tensor])
+
+        #sentence_lengths.append(min(max_sentence_length, sentence_tensor.shape[0]))
         sentence_tensors.append(F.pad(sentence_tensor, (0, max_sentence_length - sentence_tensor.shape[0]), value = ja_dict.pad())[:max_sentence_length]) # (max_sentence_length)
+        en_sentence_tensors.append(F.pad(en_sentence_tensor, (0, max_sentence_length - en_sentence_tensor.shape[0]), value = en_dict.pad())[:max_sentence_length]) # (max_sentence_length)
 
     sentence_tensors = torch.stack(sentence_tensors, dim=0).long().to(device=device) # (batch_size, max_sentence_length + 1)
-    sentence_lengths = torch.tensor(sentence_lengths).to(device=device) # (batch_size)
+    en_sentence_tensors = torch.stack(en_sentence_tensors, dim=0).long().to(device=device) # (batch_size, max_sentence_length + 1)
+    #sentence_lengths = torch.tensor(sentence_lengths).to(device=device) # (batch_size)
 
     encoder.train()
     decoder.train()
@@ -105,7 +113,8 @@ for iteration_number in range(0, max_iterations):
 
     # teacher forcing
     decoder_output = softmax_decoder_output(decoder(sentence_tensors[:, :-1], memory, pad_mask))
-    loss = criterion(decoder_output.view(-1, decoder_output.shape[2]), sentence_tensors[:, 1:].reshape(-1).long())
+    loss = criterion(decoder_output.view(-1, decoder_output.shape[2]), en_sentence_tensors[:, 1:].reshape(-1).long())
+
 
     total_loss += loss.item()
     loss.backward()
@@ -114,21 +123,27 @@ for iteration_number in range(0, max_iterations):
     # load dev data
     dev_batch_array = dev_data_array.sample(n=dev_batch_size)
     dev_sentence_tensors = []
-    dev_sentence_lengths = []
+    #dev_sentence_lengths = []
+    dev_en_sentence_tensors = []
     refs = []
     for sentence_label_pair in dev_batch_array.iterrows():
         # [JA], [EN], label
-        # dev_sentence = ' '.join(sentence_label_pair[1].iloc[0])
+        refs.append([sentence_label_pair[1].iloc[1].split()])
+
         dev_sentence = tokeniser.parse(sentence_label_pair[1].iloc[0].replace(' ', ''))
-        #print([sentence_label_pair[1].iloc[1].split()])
-        refs.append(sentence_label_pair[1].iloc[1].split())
         dev_sentence_tensor = ja_dict.encode_line(dev_sentence, append_eos=True) # (len(sentence) + 1)
         dev_sentence_tensor = torch.cat([torch.tensor([ja_dict.bos()]), dev_sentence_tensor])
-        dev_sentence_lengths.append(min(max_sentence_length, dev_sentence_tensor.shape[0]))
+        #dev_sentence_lengths.append(min(max_sentence_length, dev_sentence_tensor.shape[0]))
         dev_sentence_tensors.append(F.pad(dev_sentence_tensor, (0, max_sentence_length - dev_sentence_tensor.shape[0]), value = ja_dict.pad())[:max_sentence_length]) # (max_sentence_length)
+
+        dev_en_sentence = sentence_label_pair[1].iloc[1]
+        dev_en_sentence_tensor = en_dict.encode_line(dev_en_sentence, append_eos=True) # (len(sentence) + 1)
+        dev_en_sentence_tensor = torch.cat([torch.tensor([en_dict.bos()]), dev_en_sentence_tensor])
+        dev_en_sentence_tensors.append(F.pad(dev_en_sentence_tensor, (0, max_sentence_length - dev_en_sentence_tensor.shape[0]), value = en_dict.pad())[:max_sentence_length]) # (max_sentence_length)
     
     dev_sentence_tensors = torch.stack(dev_sentence_tensors, dim=0).long().to(device=device) # (batch_size, max_sentence_length)
-    dev_sentence_lengths = torch.tensor(dev_sentence_lengths).to(device=device) # (batch_size)
+    dev_en_sentence_tensors = torch.stack(dev_en_sentence_tensors, dim=0).long().to(device=device) # (batch_size, max_sentence_length)
+    #dev_sentence_lengths = torch.tensor(dev_sentence_lengths).to(device=device) # (batch_size)
 
     encoder.eval()
     decoder.eval()
@@ -146,7 +161,7 @@ for iteration_number in range(0, max_iterations):
         next_output = softmax_decoder_output(decoder(decoder_output, memory, pad_mask))
         # has_reached_eos = has_reached_eos * ((torch.argmax(next_output[:, -1, :].unsqueeze(1), dim = 2) - eoses) > .5)
         has_reached_eos = has_reached_eos * ((dev_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
-        loss += criterion(next_output[:, -1, :], dev_sentence_tensors[:, output_index].long())
+        loss += criterion(next_output[:, -1, :], dev_en_sentence_tensors[:, output_index].long())
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
     total_dev_loss += loss.item()
     #print(decoder_output)
@@ -194,7 +209,8 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
     # load test data
     test_batch_array = test_data_array.sample(n=dev_batch_size)
     test_sentence_tensors = []
-    test_sentence_lengths = []
+    #test_sentence_lengths = []
+    test_en_sentence_tensors = []
     total_test_loss = 0.
     for sentence_label_pair in test_batch_array.iterrows():
         # [JA], [EN], label
@@ -203,11 +219,17 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
         refs.append([sentence_label_pair[1].iloc[1].split()])
         test_sentence_tensor = ja_dict.encode_line(test_sentence, append_eos=True) # (len(sentence) + 1)
         test_sentence_tensor = torch.cat([torch.tensor([ja_dict.bos()]), test_sentence_tensor])
-        test_sentence_lengths.append(min(max_sentence_length, test_sentence_tensor.shape[0]))
+        #test_sentence_lengths.append(min(max_sentence_length, test_sentence_tensor.shape[0]))
         test_sentence_tensors.append(F.pad(test_sentence_tensor, (0, max_sentence_length - test_sentence_tensor.shape[0]), value = ja_dict.pad())[:max_sentence_length]) # (max_sentence_length)
 
+        test_en_sentence = sentence_label_pair[1].iloc[1]
+        test_en_sentence_tensor = en_dict.encode_line(test_en_sentence, append_eos=True) # (len(sentence) + 1)
+        test_en_sentence_tensor = torch.cat([torch.tensor([en_dict.bos()]), test_en_sentence_tensor])
+        test_en_sentence_tensors.append(F.pad(test_en_sentence_tensor, (0, max_sentence_length - test_en_sentence_tensor.shape[0]), value = en_dict.pad())[:max_sentence_length]) # (max_sentence_length)
+
     test_sentence_tensors = torch.stack(test_sentence_tensors, dim=0).long().to(device=device) # (batch_size, max_sentence_length)
-    test_sentence_lengths = torch.tensor(test_sentence_lengths).to(device=device) # (batch_size)
+    test_en_sentence_tensors = torch.stack(test_en_sentence_tensors, dim=0).long().to(device=device) # (batch_size, max_sentence_length)
+    #test_sentence_lengths = torch.tensor(test_sentence_lengths).to(device=device) # (batch_size)
 
     encoder.eval()
     decoder.eval()
@@ -224,7 +246,7 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
         next_output = softmax_decoder_output(decoder(decoder_output, memory, pad_mask))
         # has_reached_eos = has_reached_eos * ((torch.argmax(next_output[:, -1, :].unsqueeze(1), dim = 2) - eoses) > .5)
         has_reached_eos = has_reached_eos * ((test_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
-        loss += criterion(next_output[:, -1, :], test_sentence_tensors[:, output_index].long())
+        loss += criterion(next_output[:, -1, :], test_en_sentence_tensors[:, output_index].long())
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
     total_test_loss += loss.item()
 
