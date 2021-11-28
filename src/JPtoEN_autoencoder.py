@@ -112,7 +112,7 @@ for iteration_number in range(0, max_iterations):
     memory, pad_mask = encoder(sentence_tensors)
 
     # teacher forcing
-    decoder_output = softmax_decoder_output(decoder(sentence_tensors[:, :-1], memory, pad_mask))
+    decoder_output = softmax_decoder_output(decoder(en_sentence_tensors[:, :-1], memory, pad_mask))
     loss = criterion(decoder_output.view(-1, decoder_output.shape[2]), en_sentence_tensors[:, 1:].reshape(-1).long())
 
 
@@ -159,8 +159,8 @@ for iteration_number in range(0, max_iterations):
     eoses = torch.tensor(en_dict.eos()).unsqueeze(0).long().repeat(batch_size, 1).to(device=device) # (batch_size, 1)
     for output_index in range(1, max_sentence_length - 1):
         next_output = softmax_decoder_output(decoder(decoder_output, memory, pad_mask))
-        # has_reached_eos = has_reached_eos * ((torch.argmax(next_output[:, -1, :].unsqueeze(1), dim = 2) - eoses) > .5)
-        has_reached_eos = has_reached_eos * ((dev_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
+        has_reached_eos = has_reached_eos * ((torch.argmax(next_output[:, -1, :].unsqueeze(1), dim = 2) - eoses) > .5)
+        # has_reached_eos = has_reached_eos * ((dev_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
         loss += criterion(next_output[:, -1, :], dev_en_sentence_tensors[:, output_index].long())
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
     total_dev_loss += loss.item()
@@ -244,8 +244,8 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
     eoses = torch.tensor(ja_dict.eos()).unsqueeze(0).long().repeat(batch_size, 1).to(device=device) # (batch_size, 1)
     for output_index in range(1, max_sentence_length - 1):
         next_output = softmax_decoder_output(decoder(decoder_output, memory, pad_mask))
-        # has_reached_eos = has_reached_eos * ((torch.argmax(next_output[:, -1, :].unsqueeze(1), dim = 2) - eoses) > .5)
-        has_reached_eos = has_reached_eos * ((test_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
+        has_reached_eos = has_reached_eos * ((torch.argmax(next_output[:, -1, :].unsqueeze(1), dim = 2) - eoses) > .5)
+        # has_reached_eos = has_reached_eos * ((test_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
         loss += criterion(next_output[:, -1, :], test_en_sentence_tensors[:, output_index].long())
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
     total_test_loss += loss.item()
