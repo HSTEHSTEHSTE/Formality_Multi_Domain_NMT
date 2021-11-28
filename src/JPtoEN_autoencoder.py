@@ -70,7 +70,7 @@ test_data_array = data_array.iloc[dev_size:dev_size + test_size]
 train_data_array = data_array.iloc[dev_size + test_size:]
 
 # Build criterion and optimiser
-criterion = torch.nn.NLLLoss(ignore_index=1)
+criterion = torch.nn.NLLLoss(ignore_index=en_dict.pad())
 optimiser = torch.optim.Adam(list(encoder.parameters()) + list(decoder.parameters()), lr=initial_learning_rate, weight_decay=0)
 softmax_decoder_output = torch.nn.LogSoftmax(dim = 2)
 previous_loss = None
