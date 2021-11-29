@@ -8,14 +8,14 @@ import numpy as np
 class TransformerEncoder(nn.Module):
     """Transformer encoder"""
 
-    def __init__(self, input_size, d_model, nlayers, device, pad_index = 1, dropout = .1):
+    def __init__(self, input_size, d_model, n_layers, device, pad_index = 1, dropout = .1):
         super(TransformerEncoder, self).__init__()
         self.input_size = input_size
         self.d_model = d_model
-        self.nlayers = nlayers
+        self.nlayers = n_layers
         self.pad_index = pad_index
         self.dropout = dropout
-        self.embedder = nn.Embedding(num_embeddings=self.input_size, embedding_dim=self.d_model)
+        self.embedder = nn.Embedding(num_embeddings=self.input_size, embedding_dim=self.d_model, padding_idx=pad_index)
         self.position_encoder = PositionalEncoding(d_model=self.d_model, dropout=self.dropout, device=device)
 
         self.transformer_encoder_layer = nn.TransformerEncoderLayer(d_model=self.d_model, dropout=self.dropout, nhead=8, batch_first=True)
@@ -41,8 +41,9 @@ class TransformerDecoder(nn.Module):
         self.n_layers = n_layers
         self.pad_index = pad_index
         self.dropout = dropout
+        self.dropout_layer = nn.Dropout(p=self.dropout)
         self.device = device
-        self.embedder = nn.Embedding(num_embeddings=self.target_size, embedding_dim=self.d_model)
+        self.embedder = nn.Embedding(num_embeddings=self.target_size, embedding_dim=self.d_model, padding_idx=pad_index)
         self.position_encoder = PositionalEncoding(d_model=self.d_model, dropout=self.dropout, device=device)
         self.decoder = nn.Linear(in_features=self.d_model, out_features=self.target_size)
 
@@ -63,7 +64,7 @@ class TransformerDecoder(nn.Module):
         target_embedded = self.position_encoder(target_embedded)
         output_embedded = self.transformer_decoder(target_embedded, memory, tgt_mask=target_mask, tgt_key_padding_mask=target_pad_mask, memory_key_padding_mask=memory_pad_mask)
         output = self.decoder(output_embedded) # (batch_size, target.shape[1], self.d_model)
-        return output
+        return self.dropout_layer(output)
 
 class PositionalEncoding(nn.Module):
     r"""Inject some information about the relative or absolute position of the tokens

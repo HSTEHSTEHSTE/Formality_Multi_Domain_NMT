@@ -488,9 +488,9 @@ logging.getLogger().setLevel(logging.CRITICAL)
 mk = Mykytea.Mykytea("-deftag UNKNOWN!!")
 load_pattern_map()
 
-formal_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/formal.txt"), "a")
-informal_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/informal.txt"), "a")
-combined_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/combined_with_label.txt"), "a")
+formal_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/formal_para.txt"), "a")
+informal_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/informal_para.txt"), "a")
+combined_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/combined_with_label_para.txt"), "a")
 
 # # ************************************ #
 # # Test individual sentence

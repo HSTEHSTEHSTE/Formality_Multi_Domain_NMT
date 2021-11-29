@@ -10,20 +10,23 @@ import pandas as pd
 import nltk
 from nltk.tokenize import word_tokenize
 import MeCab
+from bpemb import BPEmb
 
 # Hyper parameters
 batch_size = 8
 dev_batch_size = 8
-max_iterations = 10000
+max_iterations = 30000
 test_iterations = 1000
-initial_learning_rate = .001
+initial_learning_rate = .0001
 lr_decay = .5
 lr_threshold = .00001
-print_every = 10
-embed_dim = 256
+print_every = 1000
+embed_dim = 512
 max_sentence_length = 15
 use_gpu = True
 device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
+corpus_file = "data/combined_with_label_para.txt"
+corpus_file_length = 2823 # 434407 raw # 2823 para # 575124 combined
 
 # Build config objects
 config = TransformerConfig() # default config
@@ -33,22 +36,22 @@ tokeniser = MeCab.Tagger("-Owakati")
 def line_tokeniser(line):
     return tokeniser.parse(line).split()
 
-en_tokeniser = word_tokenize
-def en_line_tokeniser(line):
-    return en_tokeniser(line)  
+bpemb_en = BPEmb(lang="en", dim=50)
+def en_tokeniser(line):
+    return bpemb_en.encode(line)
 
 ja_dict = Dictionary()
 en_dict = Dictionary()
-data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data/combined_with_label.txt"), "r", encoding="utf-8")
+data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), corpus_file), "r", encoding="utf-8")
 training_triplets = []
-for line in tqdm.tqdm(data_file, total=575124):
+for line in tqdm.tqdm(data_file, total=corpus_file_length):
     # Each line in data file is [JA] || [EN] || [Formality \in {0, 1}]
     elements = line.split('||')
     training_triplet = (elements[0].replace(' ', ''), elements[1].strip(), elements[2].replace('\n', ''))
     training_triplets.append(training_triplet)
     # ja_dict.encode_line(' '.join(training_triplet[0]), add_if_not_exist=True, append_eos=True)
     ja_dict.encode_line(training_triplet[0], line_tokenizer=line_tokeniser, add_if_not_exist=True)
-    en_dict.encode_line(training_triplet[1], line_tokenizer=en_line_tokeniser, add_if_not_exist=True)
+    en_dict.encode_line(training_triplet[1], line_tokenizer=en_tokeniser, add_if_not_exist=True)
 
 ja_dict.finalize()
 en_dict.finalize()
@@ -62,11 +65,11 @@ en_dictionary_size = len(en_dict)
 en_embedding = nn.Embedding(en_dictionary_size, embed_dim, padding_idx=1)
 
 # Build encoder and decoder objects
-encoder = model.TransformerEncoder(ja_dictionary_size, embed_dim, 1, device=device, pad_index=ja_dict.pad()).to(device=device)
-decoder = model.TransformerDecoder(en_dictionary_size, embed_dim, 1, device=device, pad_index=en_dict.pad(), dropout=.2).to(device=device)
+encoder = model.TransformerEncoder(ja_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=ja_dict.pad(), dropout=.3).to(device=device)
+decoder = model.TransformerDecoder(en_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=en_dict.pad(), dropout=.4).to(device=device)
 
 # Load data
-data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data/combined_with_label.txt"), header=None, index_col=None, delimiter='\\|\\|').dropna()
+data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), corpus_file), header=None, index_col=None, delimiter='\\|\\|').dropna()
 data_size = data_array.shape[0]
 dev_size = int(.1 * data_size)
 test_size = int(.1 * data_size)
@@ -76,7 +79,7 @@ test_data_array = data_array.iloc[dev_size:dev_size + test_size]
 train_data_array = data_array.iloc[dev_size + test_size:]
 
 # Build criterion and optimiser
-criterion = torch.nn.NLLLoss(ignore_index=en_dict.pad())
+criterion = torch.nn.CrossEntropyLoss(ignore_index=en_dict.pad(), label_smoothing=.3)
 optimiser = torch.optim.Adam(list(encoder.parameters()) + list(decoder.parameters()), lr=initial_learning_rate, weight_decay=0)
 softmax_decoder_output = torch.nn.LogSoftmax(dim = 2)
 previous_loss = None
@@ -96,7 +99,7 @@ for iteration_number in range(0, max_iterations):
         sentence = tokeniser.parse(sentence_label_pair[1].iloc[0].replace(' ', ''))
         sentence_tensor = ja_dict.encode_line(sentence, append_eos=True) # (len(sentence) + 1)
         sentence_tensor = torch.cat([torch.tensor([ja_dict.bos()]), sentence_tensor])
-        #en_sentence = [x for x in sentence_label_pair[1].iloc[1].split()]
+        
         en_sentence = ' '.join(en_tokeniser(sentence_label_pair[1].iloc[1]))
         en_sentence_tensor = en_dict.encode_line(en_sentence, append_eos=True)
         en_sentence_tensor = torch.cat([torch.tensor([en_dict.bos()]), en_sentence_tensor])
@@ -121,6 +124,9 @@ for iteration_number in range(0, max_iterations):
     decoder_output = softmax_decoder_output(decoder(en_sentence_tensors[:, :-1], memory, pad_mask))
     loss = criterion(decoder_output.view(-1, decoder_output.shape[2]), en_sentence_tensors[:, 1:].reshape(-1).long())
 
+    # print(torch.argmax(decoder_output, dim=2))
+    # print(en_sentence_tensors)
+    # input()
 
     total_loss += loss.item()
     loss.backward()
@@ -261,8 +267,8 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
         sentence_characters = en_dict.string(test_sentence)
         hyps.append(sentence_characters.split())
 
-test_loss = total_test_loss / (test_iterations * dev_batch_size)
+test_loss = total_test_loss / test_iterations
 print("Test loss is ", test_loss)
 
 # Calculate BLEU score
-print("Test BLEU score: ", nltk.translate.bleu_score.corpus_bleu(refs, hyps))
+print("Test BLEU score: ", nltk.translate.bleu_score.corpus_bleu(refs, hyps, weights=(.34, .33, .33)))
