@@ -22,8 +22,11 @@ print_every = 10
 embed_dim = 256
 max_sentence_length = 15
 use_gpu = True
-translation_loss_weight = .1
+translation_loss_weight = 1
 device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
+corpus_file = "data/combined_with_label.txt"
+corpus_file_length = 575124 # 434407 raw # 2823 para # 575124 combined
+out_file = "data/autoencoder_output.txt"
 
 # Build config objects
 config = TransformerConfig() # default config
@@ -33,9 +36,10 @@ tokeniser = MeCab.Tagger("-Owakati")
 def line_tokeniser(line):
     return tokeniser.parse(line).split()
 ja_dict = Dictionary()
-data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data/combined_with_label.txt"), "r", encoding="utf-8")
+data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), corpus_file), "r", encoding="utf-8")
+out_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), out_file), "w", encoding="utf-8")
 training_triplets = []
-for line in tqdm.tqdm(data_file, total=575124):
+for line in tqdm.tqdm(data_file, total=corpus_file_length):
     # Each line in data file is [JA] || [EN] || [Formality \in {0, 1}]
     elements = line.split('||')
     training_triplet = (elements[0].replace(' ', ''), elements[1].strip(), elements[2].replace('\n', ''))
@@ -56,7 +60,7 @@ decoder = model.TransformerDecoder(ja_dictionary_size, embed_dim, 1, device, pad
 classifier = model.LinearDecoder(embed_dim * max_sentence_length, 2).to(device=device)
 
 # Load data
-data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data/combined_with_label.txt"), header=None, index_col=None, delimiter='\\|\\|').dropna()
+data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), corpus_file), header=None, index_col=None, delimiter='\\|\\|').dropna()
 data_size = data_array.shape[0]
 dev_size = int(.1 * data_size)
 test_size = int(.1 * data_size)
@@ -198,6 +202,7 @@ for iteration_number in range(0, max_iterations):
 # do one pass over the test corpus
 
 refs = []
+ref_labels = []
 hyps = []
 total_accurate_labels = 0
 for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iterations):
@@ -212,6 +217,7 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
         # test_sentence = ' '.join(sentence_label_pair[1].iloc[0])
         test_sentence = tokeniser.parse(sentence_label_pair[1].iloc[0].replace(' ', ''))
         refs.append([test_sentence.split()])
+        ref_labels.append(sentence_label_pair[1].iloc[2])
         test_sentence_tensor = ja_dict.encode_line(test_sentence, append_eos=True) # (len(sentence) + 1)
         test_sentence_tensor = torch.cat([torch.tensor([ja_dict.bos()]), test_sentence_tensor])
         test_sentence_lengths.append(min(max_sentence_length, test_sentence_tensor.shape[0]))
@@ -252,6 +258,10 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
     test_formalities = torch.argmax(test_classifier_output, dim=1)
     formality_accuracy = torch.sum((test_formalities == test_formality_tensors).float())
     total_accurate_labels += formality_accuracy.item()
+
+for index, hyp in enumerate(hyps):
+    write_line = ''.join(hyp) + ' || ' + ''.join(refs[index][0]) + ' || ' + str(ref_labels[index])
+    out_file.write(write_line + '\n')
 
 test_loss = total_test_loss / test_iterations
 print("Test loss is ", test_loss)
