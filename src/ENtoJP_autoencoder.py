@@ -13,11 +13,11 @@ import MeCab
 from bpemb import BPEmb
 
 # Hyper parameters
-batch_size = 8
-dev_batch_size = 8
+batch_size = 96
+dev_batch_size = 96
 max_iterations = 30000
 test_iterations = 1000
-initial_learning_rate = .0001
+initial_learning_rate = .001
 lr_decay = .5
 lr_threshold = .00001
 print_every = 1000
@@ -26,7 +26,7 @@ max_sentence_length = 15
 use_gpu = True
 device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
 corpus_file = "data/combined_with_label.txt"
-corpus_file_length = 2823 # 434407 raw # 2823 para # 575124 combined
+corpus_file_length = 575124 # 434407 raw # 2823 para # 575124 combined
 
 # Build config objects
 config = TransformerConfig() # default config
@@ -199,14 +199,18 @@ for iteration_number in range(0, max_iterations):
         # calculate dev bleu score
         hyps = []
         for index, dev_sentence in enumerate(decoder_output):
-            sentence_characters = en_dict.string(dev_sentence)
+            sentence_characters = ja_dict.string(dev_sentence)
             #print(sentence_characters)
             hyps.append(sentence_characters.split())
 
             # for char in dev_sentence:
             #     print(ja_dict.symbols[torch.argmax(char)])
-            print(hyps[index])
-            print(refs[index][0])
+            # print(hyps[index])
+            # print(refs[index][0])
+        print(hyps[0])
+        print(refs[0][0])
+        print(hyps[1])
+        print(refs[1][0])
         
         print(nltk.translate.bleu_score.corpus_bleu(refs, hyps))
 

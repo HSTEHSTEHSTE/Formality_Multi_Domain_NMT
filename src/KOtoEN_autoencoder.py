@@ -11,6 +11,7 @@ import nltk
 from nltk.tokenize import word_tokenize
 import MeCab
 from bpemb import BPEmb
+from konlpy.tag import Kkma
 
 # Hyper parameters
 batch_size = 96
@@ -22,50 +23,50 @@ lr_decay = .5
 lr_threshold = .00001
 print_every = 1000
 embed_dim = 512
-max_sentence_length = 15
+max_sentence_length = 30
 use_gpu = True
 device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
-corpus_file = "data/combined_with_label.txt"
-corpus_file_length = 575124 # 434407 raw # 2823 para # 575124 combined
+corpus_file = "data/ko_en_tagged.txt"
+corpus_file_length = 69430
 
 # Build config objects
 config = TransformerConfig() # default config
 
+kkma = Kkma()
 # Build dictionary
-tokeniser = MeCab.Tagger("-Owakati")
 def line_tokeniser(line):
-    return tokeniser.parse(line).split()
+    return kkma.morphs(line)
 
 bpemb_en = BPEmb(lang="en", dim=50)
 def en_tokeniser(line):
     return bpemb_en.encode(line)
 
-ja_dict = Dictionary()
+ko_dict = Dictionary()
 en_dict = Dictionary()
 data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), corpus_file), "r", encoding="utf-8")
 training_triplets = []
 for line in tqdm.tqdm(data_file, total=corpus_file_length):
-    # Each line in data file is [JA] || [EN] || [Formality \in {0, 1}]
+    # Each line in data file is [ko] || [EN] || [Formality \in {0, 1}]
     elements = line.split('||')
     training_triplet = (elements[0].replace(' ', ''), elements[1].strip(), elements[2].replace('\n', ''))
     training_triplets.append(training_triplet)
-    # ja_dict.encode_line(' '.join(training_triplet[0]), add_if_not_exist=True, append_eos=True)
-    ja_dict.encode_line(training_triplet[0], line_tokenizer=line_tokeniser, add_if_not_exist=True)
+    # ko_dict.encode_line(' '.join(training_triplet[0]), add_if_not_exist=True, append_eos=True)
+    ko_dict.encode_line(training_triplet[0], line_tokenizer=line_tokeniser, add_if_not_exist=True)
     en_dict.encode_line(training_triplet[1], line_tokenizer=en_tokeniser, add_if_not_exist=True)
 
-ja_dict.finalize()
+ko_dict.finalize()
 en_dict.finalize()
 
 # Build word embedding
 # Use naive pytorch embedding
-ja_dictionary_size = len(ja_dict)
-ja_embedding = nn.Embedding(ja_dictionary_size, embed_dim, padding_idx=1) # 1: default pad value
+ko_dictionary_size = len(ko_dict)
+ko_embedding = nn.Embedding(ko_dictionary_size, embed_dim, padding_idx=1) # 1: default pad value
 
 en_dictionary_size = len(en_dict)
 en_embedding = nn.Embedding(en_dictionary_size, embed_dim, padding_idx=1)
 
 # Build encoder and decoder objects
-encoder = model.TransformerEncoder(ja_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=ja_dict.pad(), dropout=.3).to(device=device)
+encoder = model.TransformerEncoder(ko_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=ko_dict.pad(), dropout=.3).to(device=device)
 decoder = model.TransformerDecoder(en_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=en_dict.pad(), dropout=.4).to(device=device)
 
 # Load data
@@ -94,18 +95,18 @@ for iteration_number in range(0, max_iterations):
     #sentence_lengths = []
     en_sentence_tensors = []
     for sentence_label_pair in batch_array.iterrows():
-        # [JA], [EN], label
+        # [ko], [EN], label
         # sentence = ' '.join(sentence_label_pair[1].iloc[0])
-        sentence = tokeniser.parse(sentence_label_pair[1].iloc[0].replace(' ', ''))
-        sentence_tensor = ja_dict.encode_line(sentence, append_eos=True) # (len(sentence) + 1)
-        sentence_tensor = torch.cat([torch.tensor([ja_dict.bos()]), sentence_tensor])
+        sentence = ' '.join(kkma.morph(sentence_label_pair[1].iloc[0]))
+        sentence_tensor = ko_dict.encode_line(sentence, append_eos=True) # (len(sentence) + 1)
+        sentence_tensor = torch.cat([torch.tensor([ko_dict.bos()]), sentence_tensor])
         
         en_sentence = ' '.join(en_tokeniser(sentence_label_pair[1].iloc[1]))
         en_sentence_tensor = en_dict.encode_line(en_sentence, append_eos=True)
         en_sentence_tensor = torch.cat([torch.tensor([en_dict.bos()]), en_sentence_tensor])
 
         #sentence_lengths.append(min(max_sentence_length, sentence_tensor.shape[0]))
-        sentence_tensors.append(F.pad(sentence_tensor, (0, max_sentence_length - sentence_tensor.shape[0]), value = ja_dict.pad())[:max_sentence_length]) # (max_sentence_length)
+        sentence_tensors.append(F.pad(sentence_tensor, (0, max_sentence_length - sentence_tensor.shape[0]), value = ko_dict.pad())[:max_sentence_length]) # (max_sentence_length)
         en_sentence_tensors.append(F.pad(en_sentence_tensor, (0, max_sentence_length - en_sentence_tensor.shape[0]), value = en_dict.pad())[:max_sentence_length]) # (max_sentence_length)
 
     sentence_tensors = torch.stack(sentence_tensors, dim=0).long().to(device=device) # (batch_size, max_sentence_length + 1)
@@ -139,14 +140,14 @@ for iteration_number in range(0, max_iterations):
     dev_en_sentence_tensors = []
     refs = []
     for sentence_label_pair in dev_batch_array.iterrows():
-        # [JA], [EN], label
+        # [ko], [EN], label
         refs.append([en_tokeniser(sentence_label_pair[1].iloc[1])])
 
-        dev_sentence = tokeniser.parse(sentence_label_pair[1].iloc[0].replace(' ', ''))
-        dev_sentence_tensor = ja_dict.encode_line(dev_sentence, append_eos=True) # (len(sentence) + 1)
-        dev_sentence_tensor = torch.cat([torch.tensor([ja_dict.bos()]), dev_sentence_tensor])
+        dev_sentence = ' '.join(kkma.morph(sentence_label_pair[1].iloc[0]))
+        dev_sentence_tensor = ko_dict.encode_line(dev_sentence, append_eos=True) # (len(sentence) + 1)
+        dev_sentence_tensor = torch.cat([torch.tensor([ko_dict.bos()]), dev_sentence_tensor])
         #dev_sentence_lengths.append(min(max_sentence_length, dev_sentence_tensor.shape[0]))
-        dev_sentence_tensors.append(F.pad(dev_sentence_tensor, (0, max_sentence_length - dev_sentence_tensor.shape[0]), value = ja_dict.pad())[:max_sentence_length]) # (max_sentence_length)
+        dev_sentence_tensors.append(F.pad(dev_sentence_tensor, (0, max_sentence_length - dev_sentence_tensor.shape[0]), value = ko_dict.pad())[:max_sentence_length]) # (max_sentence_length)
 
         dev_en_sentence = ' '.join(en_tokeniser(sentence_label_pair[1].iloc[1]))
         dev_en_sentence_tensor = en_dict.encode_line(dev_en_sentence, append_eos=True) # (len(sentence) + 1)
@@ -204,7 +205,7 @@ for iteration_number in range(0, max_iterations):
             hyps.append(sentence_characters.split())
 
             # for char in dev_sentence:
-            #     print(ja_dict.symbols[torch.argmax(char)])
+            #     print(ko_dict.symbols[torch.argmax(char)])
             print(hyps[index])
             print(refs[index][0])
         
@@ -225,14 +226,14 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
     test_en_sentence_tensors = []
     total_test_loss = 0.
     for sentence_label_pair in test_batch_array.iterrows():
-        # [JA], [EN], label
+        # [ko], [EN], label
         # test_sentence = ' '.join(sentence_label_pair[1].iloc[0])
-        test_sentence = tokeniser.parse(sentence_label_pair[1].iloc[0].replace(' ', ''))
+        test_sentence = ' '.join(kkma.morph(sentence_label_pair[1].iloc[0]))
         refs.append([en_tokeniser(sentence_label_pair[1].iloc[1])])
-        test_sentence_tensor = ja_dict.encode_line(test_sentence, append_eos=True) # (len(sentence) + 1)
-        test_sentence_tensor = torch.cat([torch.tensor([ja_dict.bos()]), test_sentence_tensor])
+        test_sentence_tensor = ko_dict.encode_line(test_sentence, append_eos=True) # (len(sentence) + 1)
+        test_sentence_tensor = torch.cat([torch.tensor([ko_dict.bos()]), test_sentence_tensor])
         #test_sentence_lengths.append(min(max_sentence_length, test_sentence_tensor.shape[0]))
-        test_sentence_tensors.append(F.pad(test_sentence_tensor, (0, max_sentence_length - test_sentence_tensor.shape[0]), value = ja_dict.pad())[:max_sentence_length]) # (max_sentence_length)
+        test_sentence_tensors.append(F.pad(test_sentence_tensor, (0, max_sentence_length - test_sentence_tensor.shape[0]), value = ko_dict.pad())[:max_sentence_length]) # (max_sentence_length)
 
         test_en_sentence = ' '.join(en_tokeniser(sentence_label_pair[1].iloc[1]))
         test_en_sentence_tensor = en_dict.encode_line(test_en_sentence, append_eos=True) # (len(sentence) + 1)
@@ -253,7 +254,7 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
     memory, pad_mask = encoder(test_sentence_tensors)
     decoder_output = torch.tensor(en_dict.bos()).unsqueeze(0).long().repeat(batch_size, 1).to(device=device) # (batch_size, 1)
     has_reached_eos = torch.ones([batch_size, 1]).to(device=device) # (batch_size, 1)
-    eoses = torch.tensor(ja_dict.eos()).unsqueeze(0).long().repeat(batch_size, 1).to(device=device) # (batch_size, 1)
+    eoses = torch.tensor(ko_dict.eos()).unsqueeze(0).long().repeat(batch_size, 1).to(device=device) # (batch_size, 1)
     for output_index in range(1, max_sentence_length - 1):
         next_output = softmax_decoder_output(decoder(decoder_output, memory, pad_mask))
         # has_reached_eos = has_reached_eos * ((torch.argmax(next_output[:, -1, :].unsqueeze(1), dim = 2) - eoses) > .5)
