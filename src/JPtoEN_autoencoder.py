@@ -212,7 +212,7 @@ for iteration_number in range(0, max_iterations):
             print(refs[index][0])
         
         print(nltk.translate.bleu_score.corpus_bleu(refs, hyps))
-        print(RIBES.main(refs, hyps))
+        print(nltk.translate.ribes_score.corpus_ribes(refs, hyps))
         if lr < lr_threshold:
             break
 
@@ -275,4 +275,4 @@ print("Test loss is ", test_loss)
 
 # Calculate BLEU score
 print("Test BLEU score: ", nltk.translate.bleu_score.corpus_bleu(refs, hyps, weights=(.34, .33, .33)))
-print("Test RIBES score: ", RIBES.main(refs, hyps))
+print("Test RIBES score: ", nltk.translate.ribes_score.corpus_ribes(refs, hyps))
