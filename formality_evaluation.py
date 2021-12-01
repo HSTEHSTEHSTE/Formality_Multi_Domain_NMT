@@ -496,6 +496,7 @@ for n, line in tqdm(enumerate(data_file), total=16000):
     s_input = mk.getTagsToString(elements[1]).split()
     formality_ref = int(elements[2])
     processed = process(s_output, mk)
+    # if processed != .5:
     if len(s_input) < 16:
         total += 1
         if processed == formality_ref:

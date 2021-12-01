@@ -26,7 +26,7 @@ translation_loss_weight = 1
 device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
 corpus_file = "data/combined_with_label.txt"
 corpus_file_length = 575124 # 434407 raw # 2823 para # 575124 combined
-out_file = "data/autoencoder_output.txt"
+out_file = "data/autoencoder_output_formality_aware.txt"
 
 # Build config objects
 config = TransformerConfig() # default config
@@ -112,12 +112,12 @@ for iteration_number in range(0, max_iterations):
     # teacher forcing
     decoder_output = softmax_decoder_output(decoder(sentence_tensors[:, :-1], memory, pad_mask))
     loss = translation_loss_weight * criterion(decoder_output.view(-1, decoder_output.shape[2]), sentence_tensors[:, 1:].reshape(-1).long())
-    loss += criterion(classifier_output, formality_tensors)
+    loss += criterion(classifier_output, formality_tensors) * 10
 
     # reclassify formality
     output_encoding, pad_mask = encoder(torch.cat([sentence_tensors[:, 0].unsqueeze(1), torch.argmax(decoder_output, dim = 2)], dim = 1))
     new_classes = classifier(output_encoding.view(batch_size, -1))
-    loss += criterion(classifier_output, formality_tensors)
+    loss += criterion(classifier_output, formality_tensors) * 10
 
     total_loss += loss.item()
     loss.backward()
