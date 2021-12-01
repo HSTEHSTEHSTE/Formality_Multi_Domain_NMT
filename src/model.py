@@ -108,15 +108,17 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 class LinearDecoder(nn.Module):
-    def __init__(self, input_size, output_size):
+    def __init__(self, input_size, output_size, dropout = .2):
         super(LinearDecoder, self).__init__()
+        self.sigmoid = nn.Sigmoid()
         self.linear = nn.Linear(input_size, output_size, bias=True)
         self.logsoftmax = nn.LogSoftmax(dim=1)
+        self.dropout_layer = nn.Dropout(p=dropout)
     
     def forward(self, classifier_input):
         """
             input: [batch_size, input_size]
         """
-        linear_output = self.linear(classifier_input)
+        linear_output = self.dropout_layer(self.linear(self.sigmoid(classifier_input)))
         logsoftmax_output = self.logsoftmax(linear_output) # (batch_size, output_size)
         return logsoftmax_output

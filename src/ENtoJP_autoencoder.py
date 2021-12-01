@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 import model
-#from fairseq.models.transformer.transformer_config import TransformerConfig
+from fairseq.models.transformer.transformer_config import TransformerConfig
 from fairseq.data.dictionary import Dictionary
 import os
 import tqdm
@@ -12,15 +12,12 @@ from nltk.tokenize import word_tokenize
 import MeCab
 from bpemb import BPEmb
 
-import RIBES
-import subprocess
-
 # Hyper parameters
 batch_size = 96
 dev_batch_size = 96
-max_iterations = 300000
+max_iterations = 30000
 test_iterations = 1000
-initial_learning_rate = .0005
+initial_learning_rate = .001
 lr_decay = .5
 lr_threshold = .00001
 print_every = 1000
@@ -32,7 +29,7 @@ corpus_file = "data/combined_with_label.txt"
 corpus_file_length = 575124 # 434407 raw # 2823 para # 575124 combined
 
 # Build config objects
-#config = TransformerConfig() # default config
+config = TransformerConfig() # default config
 
 # Build dictionary
 tokeniser = MeCab.Tagger("-Owakati")
@@ -45,7 +42,7 @@ def en_tokeniser(line):
 
 ja_dict = Dictionary()
 en_dict = Dictionary()
-data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), corpus_file), "r", encoding="utf-8")
+data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), corpus_file), "r", encoding="utf-8")
 training_triplets = []
 for line in tqdm.tqdm(data_file, total=corpus_file_length):
     # Each line in data file is [JA] || [EN] || [Formality \in {0, 1}]
@@ -68,8 +65,8 @@ en_dictionary_size = len(en_dict)
 en_embedding = nn.Embedding(en_dictionary_size, embed_dim, padding_idx=1)
 
 # Build encoder and decoder objects
-encoder = model.TransformerEncoder(ja_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=ja_dict.pad(), dropout=.3).to(device=device)
-decoder = model.TransformerDecoder(en_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=en_dict.pad(), dropout=.4).to(device=device)
+encoder = model.TransformerEncoder(en_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=en_dict.pad(), dropout=.3).to(device=device)
+decoder = model.TransformerDecoder(ja_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=ja_dict.pad(), dropout=.4).to(device=device)
 
 # Load data
 data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), corpus_file), header=None, index_col=None, delimiter='\\|\\|').dropna()
@@ -82,7 +79,7 @@ test_data_array = data_array.iloc[dev_size:dev_size + test_size]
 train_data_array = data_array.iloc[dev_size + test_size:]
 
 # Build criterion and optimiser
-criterion = torch.nn.CrossEntropyLoss(ignore_index=en_dict.pad(), label_smoothing=.3)
+criterion = torch.nn.CrossEntropyLoss(ignore_index=ja_dict.pad(), label_smoothing=.3)
 optimiser = torch.optim.Adam(list(encoder.parameters()) + list(decoder.parameters()), lr=initial_learning_rate, weight_decay=0)
 softmax_decoder_output = torch.nn.LogSoftmax(dim = 2)
 previous_loss = None
@@ -121,11 +118,11 @@ for iteration_number in range(0, max_iterations):
 
     # main forward pass
     loss = torch.tensor(0.).to(device=device)
-    memory, pad_mask = encoder(sentence_tensors)
+    memory, pad_mask = encoder(en_sentence_tensors)
 
     # teacher forcing
-    decoder_output = softmax_decoder_output(decoder(en_sentence_tensors[:, :-1], memory, pad_mask))
-    loss = criterion(decoder_output.view(-1, decoder_output.shape[2]), en_sentence_tensors[:, 1:].reshape(-1).long())
+    decoder_output = softmax_decoder_output(decoder(sentence_tensors[:, :-1], memory, pad_mask))
+    loss = criterion(decoder_output.view(-1, decoder_output.shape[2]), sentence_tensors[:, 1:].reshape(-1).long())
 
     # print(torch.argmax(decoder_output, dim=2))
     # print(en_sentence_tensors)
@@ -143,13 +140,13 @@ for iteration_number in range(0, max_iterations):
     refs = []
     for sentence_label_pair in dev_batch_array.iterrows():
         # [JA], [EN], label
-        refs.append([en_tokeniser(sentence_label_pair[1].iloc[1])])
-
         dev_sentence = tokeniser.parse(sentence_label_pair[1].iloc[0].replace(' ', ''))
         dev_sentence_tensor = ja_dict.encode_line(dev_sentence, append_eos=True) # (len(sentence) + 1)
         dev_sentence_tensor = torch.cat([torch.tensor([ja_dict.bos()]), dev_sentence_tensor])
         #dev_sentence_lengths.append(min(max_sentence_length, dev_sentence_tensor.shape[0]))
         dev_sentence_tensors.append(F.pad(dev_sentence_tensor, (0, max_sentence_length - dev_sentence_tensor.shape[0]), value = ja_dict.pad())[:max_sentence_length]) # (max_sentence_length)
+
+        refs.append([dev_sentence.split()])
 
         dev_en_sentence = ' '.join(en_tokeniser(sentence_label_pair[1].iloc[1]))
         dev_en_sentence_tensor = en_dict.encode_line(dev_en_sentence, append_eos=True) # (len(sentence) + 1)
@@ -167,16 +164,16 @@ for iteration_number in range(0, max_iterations):
 
     # dev forward pass
     loss = torch.tensor(0.).to(device=device)
-    memory, pad_mask = encoder(dev_sentence_tensors)
-    decoder_output = torch.tensor(en_dict.bos()).unsqueeze(0).long().repeat(batch_size, 1).to(device=device) # (batch_size, 1)
-    #print(decoder_output)
+    memory, pad_mask = encoder(dev_en_sentence_tensors)
+    decoder_output = torch.tensor(ja_dict.bos()).unsqueeze(0).long().repeat(batch_size, 1).to(device=device) # (batch_size, 1)
+
     has_reached_eos = torch.ones([batch_size, 1]).to(device=device) # (batch_size, 1)
-    eoses = torch.tensor(en_dict.eos()).unsqueeze(0).long().repeat(batch_size, 1).to(device=device) # (batch_size, 1)
+    eoses = torch.tensor(ja_dict.eos()).unsqueeze(0).long().repeat(batch_size, 1).to(device=device) # (batch_size, 1)
     for output_index in range(1, max_sentence_length - 1):
         next_output = softmax_decoder_output(decoder(decoder_output, memory, pad_mask))
         # has_reached_eos = has_reached_eos * ((torch.argmax(next_output[:, -1, :].unsqueeze(1), dim = 2) - eoses) > .5)
-        has_reached_eos = has_reached_eos * ((dev_en_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
-        loss += criterion(next_output[:, -1, :], dev_en_sentence_tensors[:, output_index].long())
+        has_reached_eos = has_reached_eos * ((dev_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
+        loss += criterion(next_output[:, -1, :], dev_sentence_tensors[:, output_index].long())
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
     total_dev_loss += loss.item()
     #print(decoder_output)
@@ -202,17 +199,21 @@ for iteration_number in range(0, max_iterations):
         # calculate dev bleu score
         hyps = []
         for index, dev_sentence in enumerate(decoder_output):
-            sentence_characters = en_dict.string(dev_sentence)
+            sentence_characters = ja_dict.string(dev_sentence)
             #print(sentence_characters)
             hyps.append(sentence_characters.split())
 
             # for char in dev_sentence:
             #     print(ja_dict.symbols[torch.argmax(char)])
-            print(hyps[index])
-            print(refs[index][0])
+            # print(hyps[index])
+            # print(refs[index][0])
+        print(hyps[0])
+        print(refs[0][0])
+        print(hyps[1])
+        print(refs[1][0])
         
         print(nltk.translate.bleu_score.corpus_bleu(refs, hyps))
-        print(RIBES.main(refs, hyps))
+
         if lr < lr_threshold:
             break
 
@@ -253,21 +254,21 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
 
     # test forward pass
     loss = torch.tensor(0.).to(device=device)
-    memory, pad_mask = encoder(test_sentence_tensors)
-    decoder_output = torch.tensor(en_dict.bos()).unsqueeze(0).long().repeat(batch_size, 1).to(device=device) # (batch_size, 1)
+    memory, pad_mask = encoder(test_en_sentence_tensors)
+    decoder_output = torch.tensor(ja_dict.bos()).unsqueeze(0).long().repeat(batch_size, 1).to(device=device) # (batch_size, 1)
     has_reached_eos = torch.ones([batch_size, 1]).to(device=device) # (batch_size, 1)
     eoses = torch.tensor(ja_dict.eos()).unsqueeze(0).long().repeat(batch_size, 1).to(device=device) # (batch_size, 1)
     for output_index in range(1, max_sentence_length - 1):
         next_output = softmax_decoder_output(decoder(decoder_output, memory, pad_mask))
         # has_reached_eos = has_reached_eos * ((torch.argmax(next_output[:, -1, :].unsqueeze(1), dim = 2) - eoses) > .5)
-        has_reached_eos = has_reached_eos * ((test_en_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
-        loss += criterion(next_output[:, -1, :], test_en_sentence_tensors[:, output_index].long())
+        has_reached_eos = has_reached_eos * ((test_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
+        loss += criterion(next_output[:, -1, :], test_sentence_tensors[:, output_index].long())
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
     total_test_loss += loss.item()
 
     # Log output sentences
     for index, test_sentence in enumerate(decoder_output):
-        sentence_characters = en_dict.string(test_sentence)
+        sentence_characters = ja_dict.string(test_sentence)
         hyps.append(sentence_characters.split())
 
 test_loss = total_test_loss / test_iterations
@@ -275,4 +276,3 @@ print("Test loss is ", test_loss)
 
 # Calculate BLEU score
 print("Test BLEU score: ", nltk.translate.bleu_score.corpus_bleu(refs, hyps, weights=(.34, .33, .33)))
-print("Test RIBES score: ", RIBES.main(refs, hyps))

@@ -2,8 +2,8 @@ import logging
 import re
 import Mykytea
 import os
+import re
 from tqdm import tqdm
-from nltk.tokenize import sent_tokenize
 
 # informal -> polite example
 # input (informal):
@@ -484,136 +484,22 @@ logging.getLogger().setLevel(logging.CRITICAL)
 mk = Mykytea.Mykytea("-deftag UNKNOWN!!")
 load_pattern_map()
 
-formal_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/formal_para.txt"), "a")
-informal_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/informal_para.txt"), "a")
-combined_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/combined_with_label_para.txt"), "a")
-
-# # ************************************ #
-# # Test individual sentence
-# s = "私たちは不可能を可能にできるということです。"
-# processed = process(s, mk)
-# print(processed)
-
-# # ************************************ #
-# # Process legal corpus
-# data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/jaen-law/txt/law-corpus.ja"), "r")
-# data_file_en = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/jaen-law/txt/law-corpus.en"), "r")
-# total_processed = 0
-# for n, s in enumerate(data_file):
-#     if random.random() > .9:
-#         processed = process(s, mk)
-#     else:
-#         processed = .5
-#     total_processed += processed
-
-#     if n % 1000 == 999:
-#         print(n + 1, total_processed / (n + 1))
-    
-
-# print("Total likelihood is ", total_processed / (n + 1))
-# data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/jaen-law/txt/law-corpus.ja"), "r")
-# if total_processed / (n + 1) < .5:
-#     print("Document is informal.")
-#     for line in tqdm(data_file, total = n + 1):
-#         sentences = tokenise_sentence(line)
-#         en = data_file_en.readline().strip()
-#         en_sentences = sent_tokenize(en)
-#         ja_sentence_list = []
-#         for sentence in sentences:
-#             informal_file.write(sentence)
-#             ja_sentence_list.append(sentence)
-
-#         # detect noisy alignments where sentence numbers are different    
-#         if len(ja_sentence_list) == len(en_sentences):
-#             for sentence_num, sentence in enumerate(ja_sentence_list):
-#                 write_content = sentence.replace(' ', '').replace('\n', '') + ' || ' + en_sentences[sentence_num] + ' || ' + str(0)
-#                 combined_file.write(write_content + '\n')
-# else:
-#     print("Document is formal.")
-#     for line in tqdm(data_file, total = n + 1):
-#         sentences = tokenise_sentence(line)
-#         en = data_file_en.readline().strip()
-#         en_sentences = sent_tokenize(en)
-#         ja_sentence_list = []
-#         for sentence in sentences:
-#             formal_file.write(sentence)
-#             ja_sentence_list.append(sentence)
-
-#         # detect noisy alignments where sentence numbers are different    
-#         if len(ja_sentence_list) == len(en_sentences):
-#             for sentence_num, sentence in enumerate(ja_sentence_list):
-#                 write_content = sentence.replace(' ', '').replace('\n', '') + ' || ' + en_sentences[sentence_num] + ' || ' + str(1)
-#                 combined_file.write(write_content + '\n')
-
-
-# # ************************************ #
-# # Process raw corpus
-# data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/raw/raw"), "r")
-
-# formality_bins = [0, 0, 0]
-# for n, line in tqdm(enumerate(data_file), total=2801388):
-#     line_content = line.split("\t")
-#     en = line_content[0]
-#     s = line_content[1]
-#     processed = process(s, mk)
-#     ja_sentences = []
-#     if processed == 1:
-#         formality_bins[1] += 1
-#         sentences = tokenise_sentence(s)
-#         for sentence in sentences:
-#             ja_sentences.append(sentence)
-#             informal_file.write(sentence)
-#     elif processed == 0:
-#         formality_bins[0] += 1
-#         sentences = tokenise_sentence(s)
-#         for sentence in sentences:
-#             ja_sentences.append(sentence)
-#             formal_file.write(sentence)
-#     else:
-#         formality_bins[2] += 1
-
-#     # write to combined file - ja[space]en[space]formality_label
-#     en_sentences = sent_tokenize(en)
-    
-#     # detect noisy alignments where sentence numbers are different
-#     if len(en_sentences) == len(ja_sentences):  
-#         for sentence_num, sentence in enumerate(ja_sentences):
-#             write_content = sentence.replace(' ', '').replace('\n', '') + ' || ' + en_sentences[sentence_num] + ' || ' + str(processed)
-#             combined_file.write(write_content + '\n')
-
-
 # ************************************ #
 # Process align corpus
-data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/para/ja.txt"), "r", encoding="shift_jisx0213")
-translation_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/para/en.txt"), "r", encoding="shift_jisx0213")
+data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/autoencoder_output.txt"), "r", encoding="utf-8")
 
-formality_bins = [0, 0, 0]
-for n, line in tqdm(enumerate(data_file), total=118140):
-    s = line.strip()
-    en = translation_file.readline().strip()
-    ja_sentences = []
-    if ".alml" not in s and len(en) > 0:
-        processed = process(s, mk)
-        if processed == 1:
-            formality_bins[1] += 1
-            sentences = tokenise_sentence(s)
-            for sentence in sentences:
-                ja_sentences.append(sentence)
-                informal_file.write(sentence + '\n')
-        elif processed == 0:
-            formality_bins[0] += 1
-            sentences = tokenise_sentence(s)
-            for sentence in sentences:
-                ja_sentences.append(sentence)
-                formal_file.write(sentence + '\n')
-        else:
-            formality_bins[2] += 1
+total_accurate = 0
+total = 0
+for n, line in tqdm(enumerate(data_file), total=16000):
+    elements = line.strip().split('||')
+    s_output = elements[0]
+    s_input = mk.getTagsToString(elements[1]).split()
+    formality_ref = int(elements[2])
+    processed = process(s_output, mk)
+    # if processed != .5:
+    if len(s_input) < 16:
+        total += 1
+        if processed == formality_ref:
+            total_accurate += 1
 
-        # write to combined file - ja[space]en[space]formality_label    
-        en_sentences = sent_tokenize(en)
-        
-        # detect noisy alignments where sentence numbers are different
-        if len(en_sentences) == len(ja_sentences):  
-            for sentence_num, sentence in enumerate(ja_sentences):
-                write_content = sentence.replace(' ', '') + ' || ' + en_sentences[sentence_num] + ' || ' + str(processed)
-                combined_file.write(write_content + '\n')
+print("Formality accuracy: ", total_accurate / float(total))
