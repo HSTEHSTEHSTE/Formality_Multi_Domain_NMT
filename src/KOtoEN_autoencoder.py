@@ -26,8 +26,8 @@ embed_dim = 512
 max_sentence_length = 30
 use_gpu = True
 device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
-corpus_file = "data/ko_en_tagged.txt"
-corpus_file_length = 69430
+corpus_file = "data/ko_en_tagged_short.txt"
+corpus_file_length = 60000 #69430 full, 60000 short
 
 # Build config objects
 config = TransformerConfig() # default config
@@ -35,7 +35,7 @@ config = TransformerConfig() # default config
 kkma = Kkma()
 # Build dictionary
 def line_tokeniser(line):
-    return kkma.morphs(line)
+    return kkma.morphs(line.encode('utf-8').strip())
 
 bpemb_en = BPEmb(lang="en", dim=50)
 def en_tokeniser(line):
