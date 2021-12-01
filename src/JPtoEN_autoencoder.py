@@ -28,8 +28,9 @@ embed_dim = 512
 max_sentence_length = 15
 use_gpu = True
 device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
-corpus_file = "data/combined_with_label.txt"
-corpus_file_length = 575124 # 434407 raw # 2823 para # 575124 combined
+corpus_file = "data/combined_with_label_simple.txt"
+corpus_file_length = 131687 # simple # 575124 total # 434407 raw # 2823 para # 575124 combined
+out_file = "data/autoencoder_output_simple.txt"
 
 # Build config objects
 #config = TransformerConfig() # default config
@@ -45,7 +46,8 @@ def en_tokeniser(line):
 
 ja_dict = Dictionary()
 en_dict = Dictionary()
-data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), corpus_file), "r", encoding="utf-8")
+data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), corpus_file), "r", encoding="utf-8")
+out_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), out_file), "w", encoding="utf-8")
 training_triplets = []
 for line in tqdm.tqdm(data_file, total=corpus_file_length):
     # Each line in data file is [JA] || [EN] || [Formality \in {0, 1}]
@@ -219,6 +221,7 @@ for iteration_number in range(0, max_iterations):
 # do one pass over the test corpus
 
 refs = []
+ref_labels = []
 hyps = []
 for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iterations):
     # load test data
@@ -232,6 +235,7 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
         # test_sentence = ' '.join(sentence_label_pair[1].iloc[0])
         test_sentence = tokeniser.parse(sentence_label_pair[1].iloc[0].replace(' ', ''))
         refs.append([en_tokeniser(sentence_label_pair[1].iloc[1])])
+        ref_labels.append(int(sentence_label_pair[1].iloc[2]))
         test_sentence_tensor = ja_dict.encode_line(test_sentence, append_eos=True) # (len(sentence) + 1)
         test_sentence_tensor = torch.cat([torch.tensor([ja_dict.bos()]), test_sentence_tensor])
         #test_sentence_lengths.append(min(max_sentence_length, test_sentence_tensor.shape[0]))
@@ -269,6 +273,14 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
     for index, test_sentence in enumerate(decoder_output):
         sentence_characters = en_dict.string(test_sentence)
         hyps.append(sentence_characters.split())
+
+for index, hyp in enumerate(hyps):
+    write_line = ''.join(hyp) + ' || ' + ''.join(refs[index][0]) + ' || ' + str(ref_labels[index])
+    out_file.write(write_line + '\n')
+
+# save trained models
+torch.save(encoder, 'encoder.pt')
+torch.save(decoder, 'decoder.pt')
 
 test_loss = total_test_loss / test_iterations
 print("Test loss is ", test_loss)

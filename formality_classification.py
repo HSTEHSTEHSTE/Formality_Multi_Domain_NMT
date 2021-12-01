@@ -484,9 +484,9 @@ logging.getLogger().setLevel(logging.CRITICAL)
 mk = Mykytea.Mykytea("-deftag UNKNOWN!!")
 load_pattern_map()
 
-formal_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/formal_para.txt"), "a")
-informal_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/informal_para.txt"), "a")
-combined_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/combined_with_label_para.txt"), "a")
+formal_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/formal_simple.txt"), "a")
+informal_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/informal_simple.txt"), "a")
+combined_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/combined_with_label_simple.txt"), "a")
 
 # # ************************************ #
 # # Test individual sentence
@@ -582,15 +582,51 @@ combined_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspat
 #             combined_file.write(write_content + '\n')
 
 
+# # ************************************ #
+# # Process align corpus
+# data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/para/ja.txt"), "r", encoding="shift_jisx0213")
+# translation_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/para/en.txt"), "r", encoding="shift_jisx0213")
+
+# formality_bins = [0, 0, 0]
+# for n, line in tqdm(enumerate(data_file), total=118140):
+#     s = line.strip()
+#     en = translation_file.readline().strip()
+#     ja_sentences = []
+#     if ".alml" not in s and len(en) > 0:
+#         processed = process(s, mk)
+#         if processed == 1:
+#             formality_bins[1] += 1
+#             sentences = tokenise_sentence(s)
+#             for sentence in sentences:
+#                 ja_sentences.append(sentence)
+#                 informal_file.write(sentence + '\n')
+#         elif processed == 0:
+#             formality_bins[0] += 1
+#             sentences = tokenise_sentence(s)
+#             for sentence in sentences:
+#                 ja_sentences.append(sentence)
+#                 formal_file.write(sentence + '\n')
+#         else:
+#             formality_bins[2] += 1
+
+#         # write to combined file - ja[space]en[space]formality_label    
+#         en_sentences = sent_tokenize(en)
+        
+#         # detect noisy alignments where sentence numbers are different
+#         if len(en_sentences) == len(ja_sentences):  
+#             for sentence_num, sentence in enumerate(ja_sentences):
+#                 write_content = sentence.replace(' ', '') + ' || ' + en_sentences[sentence_num] + ' || ' + str(processed)
+#                 combined_file.write(write_content + '\n')
+
 # ************************************ #
-# Process align corpus
-data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/para/ja.txt"), "r", encoding="shift_jisx0213")
-translation_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/para/en.txt"), "r", encoding="shift_jisx0213")
+# Process simple corpus
+data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/simple.tsv"), "r", encoding="utf-8")
 
 formality_bins = [0, 0, 0]
-for n, line in tqdm(enumerate(data_file), total=118140):
-    s = line.strip()
-    en = translation_file.readline().strip()
+for n, line in tqdm(enumerate(data_file), total=239458):
+    line_elements = line.split('\t')
+    s = line_elements[1]
+    en = line_elements[3]
     ja_sentences = []
     if ".alml" not in s and len(en) > 0:
         processed = process(s, mk)
