@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 import model
-from fairseq.models.transformer.transformer_config import TransformerConfig
+#from fairseq.models.transformer.transformer_config import TransformerConfig
 from fairseq.data.dictionary import Dictionary
 import os
 import tqdm
@@ -11,6 +11,9 @@ import nltk
 from nltk.tokenize import word_tokenize
 import MeCab
 from bpemb import BPEmb
+
+import RIBES
+import subprocess
 
 # Hyper parameters
 batch_size = 8
@@ -29,7 +32,7 @@ corpus_file = "data/combined_with_label_para.txt"
 corpus_file_length = 2823 # 434407 raw # 2823 para # 575124 combined
 
 # Build config objects
-config = TransformerConfig() # default config
+#config = TransformerConfig() # default config
 
 # Build dictionary
 tokeniser = MeCab.Tagger("-Owakati")
@@ -42,7 +45,7 @@ def en_tokeniser(line):
 
 ja_dict = Dictionary()
 en_dict = Dictionary()
-data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), corpus_file), "r", encoding="utf-8")
+data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), corpus_file), "r", encoding="utf-8")
 training_triplets = []
 for line in tqdm.tqdm(data_file, total=corpus_file_length):
     # Each line in data file is [JA] || [EN] || [Formality \in {0, 1}]
@@ -209,7 +212,7 @@ for iteration_number in range(0, max_iterations):
             print(refs[index][0])
         
         print(nltk.translate.bleu_score.corpus_bleu(refs, hyps))
-
+        print(RIBES.main(refs, hyps))
         if lr < lr_threshold:
             break
 
@@ -272,3 +275,4 @@ print("Test loss is ", test_loss)
 
 # Calculate BLEU score
 print("Test BLEU score: ", nltk.translate.bleu_score.corpus_bleu(refs, hyps, weights=(.34, .33, .33)))
+print("Test RIBES score: ", RIBES.main(refs, hyps))
