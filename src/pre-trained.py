@@ -19,21 +19,23 @@ dev_batch_size = 128
 max_iterations = 100
 initial_learning_rate = .001
 lr_decay = .5
-print_every = 2
+print_every = 10
 lr_threshold = .00001
 use_gpu = True
 device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
+corpus_file = "data/combined_with_label_simple.txt"
 
 # Load data
-data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data/data.csv"), header=None, index_col=None, delimiter=',')
-assert data_array.shape[1] == 2
+# data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data/data.csv"), header=None, index_col=None, delimiter=',')
+data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), corpus_file), header=None, index_col=None, delimiter='\\|\\|').dropna()
+assert data_array.shape[1] == 3
 data_size = data_array.shape[0]
 dev_size = int(.1 * data_size)
 test_size = int(.1 * data_size)
 data_array = data_array.sample(frac=1)
-dev_data_array = data_array.loc[:dev_size]
-test_data_array = data_array.loc[dev_size:dev_size + test_size]
-train_data_array = data_array.loc[dev_size + test_size:]
+dev_data_array = data_array.iloc[:dev_size]
+test_data_array = data_array.iloc[dev_size:dev_size + test_size]
+train_data_array = data_array.iloc[dev_size + test_size:]
 
 # Initialise model
 classifier = model.LinearDecoder(768, 2) # Magic numbers: 768 length of pre-trained BERT output; 2: number of formality labels
@@ -47,9 +49,9 @@ lr = initial_learning_rate
 accuracies = []
 losses = []
 total_accuracy = 0
-total_loss = 0
+total_loss = 0.
 total_dev_accuracy = 0
-total_dev_loss = 0
+total_dev_loss = 0.
 for iteration_number in range(0, max_iterations):
     batch_array = train_data_array.sample(n=batch_size)
     output_pooled_list = []
@@ -58,7 +60,7 @@ for iteration_number in range(0, max_iterations):
         inputs = tokenizer(sentence, return_tensors="pt")
         output_pooled = bertjapanese(**inputs).pooler_output # shape [1, 768]
         output_pooled_list.append(output_pooled)
-    target_labels = torch.tensor(batch_array.iloc[:, [1]].to_numpy()).squeeze(1) # shape [batch_size]
+    target_labels = torch.tensor(batch_array.iloc[:, [2]].to_numpy()).squeeze(1) # shape [batch_size]
 
     classifier_input_batched = torch.stack(output_pooled_list, dim=0) # shape [batch_size, 768]
     target_labels = target_labels.to(device=device)
@@ -75,7 +77,7 @@ for iteration_number in range(0, max_iterations):
 
     # calculate training accuracy
     output_labels = torch.argmax(output_labels, dim=1)
-    accuracy_tensor = torch.where(output_labels - target_labels < .5, torch.tensor(1).to(device=device), torch.tensor(0).to(device=device))
+    accuracy_tensor = torch.where(torch.abs(output_labels - target_labels) < .5, torch.tensor(1).to(device=device), torch.tensor(0).to(device=device))
     accuracy_batch = torch.sum(accuracy_tensor).item()
     accuracy = accuracy_batch / batch_size
     total_accuracy += accuracy
@@ -91,7 +93,7 @@ for iteration_number in range(0, max_iterations):
         inputs = tokenizer(sentence, return_tensors="pt")
         output_pooled = bertjapanese(**inputs).pooler_output # shape [1, 768]
         dev_output_pooled_list.append(output_pooled)
-    dev_target_labels = torch.tensor(dev_batch_array.iloc[:, [1]].to_numpy()).squeeze(1) # shape [dev_batch_size]
+    dev_target_labels = torch.tensor(dev_batch_array.iloc[:, [2]].to_numpy()).squeeze(1) # shape [dev_batch_size]
 
     dev_classifier_input_batched = torch.stack(dev_output_pooled_list, dim=0) # shape [dev_batch_size, 768]
     dev_target_labels = dev_target_labels.to(device=device)
@@ -105,19 +107,19 @@ for iteration_number in range(0, max_iterations):
 
     # calculate dev accuracy
     dev_output_labels = torch.argmax(dev_output_labels, dim=1)
-    dev_accuracy_tensor = torch.where(dev_output_labels - dev_target_labels < .5, torch.tensor(1).to(device=device), torch.tensor(0).to(device=device))
+    dev_accuracy_tensor = torch.where(torch.abs(dev_output_labels - dev_target_labels) < .5, torch.tensor(1).to(device=device), torch.tensor(0).to(device=device))
     dev_accuracy = torch.sum(dev_accuracy_tensor).item()
     total_dev_accuracy += dev_accuracy
 
     # calculate dev loss, update learning rate
     if (iteration_number + 1) % print_every == 0:
         print("Iteration ", iteration_number + 1, " , loss is ", total_loss / print_every, " , training accuracy is ", total_accuracy / print_every)
-        total_loss = 0
+        total_loss = 0.
         total_accuracy = 0
         
         dev_loss = total_dev_loss / print_every
         print("Dev loss is ", dev_loss, " , dev accuracy is ", total_dev_accuracy / (batch_size * print_every))
-        total_dev_loss = 0
+        total_dev_loss = 0.
         total_dev_accuracy = 0
         
         # update learning rate
@@ -145,7 +147,7 @@ for test_batch_number in tqdm.tqdm(range(0, test_batches), total=test_batches):
         inputs = tokenizer(sentence, return_tensors="pt")
         output_pooled = bertjapanese(**inputs).pooler_output # shape [1, 768]
         test_output_pooled_list.append(output_pooled)
-    test_target_labels = torch.tensor(test_batch_array.iloc[:, [1]].to_numpy()).squeeze(1) # shape [dev_batch_size]
+    test_target_labels = torch.tensor(test_batch_array.iloc[:, [2]].to_numpy()).squeeze(1) # shape [dev_batch_size]
 
     test_classifier_input_batched = torch.stack(test_output_pooled_list, dim=0) # shape [dev_batch_size, 768]
     test_target_labels = test_target_labels.to(device=device)
@@ -156,7 +158,7 @@ for test_batch_number in tqdm.tqdm(range(0, test_batches), total=test_batches):
 
     # calculate test accuracy
     test_output_labels = torch.argmax(test_output_labels, dim=1)
-    test_accuracy_tensor = torch.where(test_output_labels - test_target_labels < .5, torch.tensor(1).to(device=device), torch.tensor(0).to(device=device))
+    test_accuracy_tensor = torch.where(torch.abs(test_output_labels - test_target_labels) < .5, torch.tensor(1).to(device=device), torch.tensor(0).to(device=device))
     test_accuracy = torch.sum(test_accuracy_tensor).item()
     total_test_accuracy += test_accuracy
 print("Test accuracy: ", total_test_accuracy / (test_batches * batch_size))

@@ -23,8 +23,8 @@ embed_dim = 256
 max_sentence_length = 15
 use_gpu = True
 device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
-corpus_file = "data/combined_with_label.txt"
-corpus_file_length = 575124 # 434407 raw # 2823 para # 575124 combined
+corpus_file = "data/combined_with_label_simple.txt"
+corpus_file_length = 131687 # simple # 434407 raw # 2823 para # 575124 combined
 out_file = "data/autoencoder_output.txt"
 
 # Build config objects
@@ -36,7 +36,7 @@ def line_tokeniser(line):
     return tokeniser.parse(line).split()
 ja_dict = Dictionary()
 data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), corpus_file), "r", encoding="utf-8")
-out_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), out_file), "2", encoding="utf-8")
+out_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), out_file), "w", encoding="utf-8")
 
 training_triplets = []
 for line in tqdm.tqdm(data_file, total=corpus_file_length):
@@ -226,6 +226,10 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
     for index, test_sentence in enumerate(decoder_output):
         sentence_characters = ja_dict.string(test_sentence)
         hyps.append(sentence_characters.split())
+
+# save trained models
+torch.save(encoder, 'encoder.pt')
+torch.save(decoder, 'decoder.pt')
 
 test_loss = total_test_loss / test_iterations
 print("Test loss is ", test_loss)

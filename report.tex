@@ -198,7 +198,7 @@ We encountered significant difficulties when constructing the base Japanese to E
 
 This can be seen as a special case of the base translation model, except that the source and the target languages are identical and we measure its ability to reconstruct the original sentence as well as the correct formality label. It follows the same model architecture as the base translation model. During our experiments, we found that the number of transformer encoder and decoder layers had a negative effect on the model's ability to perform the sentence reconstruction task: with the default number of layers ($6$), the model would emit the highest-frequency word in every position. This is potentially due to the relative simplicity of the task and the model's large size, the combination of which caused a propsentiy towards overfitting.
 
-On our Japanese corpus, we were able to achieve a BLEU score of $64.8$ when benchmarked against the original sentence.
+On our Japanese corpus, we were able to achieve a BLEU score of $79.2$ when benchmarked against the original sentence.
 
 \subsection{Adding the Classifier}
 

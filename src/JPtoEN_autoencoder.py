@@ -18,7 +18,7 @@ import subprocess
 # Hyper parameters
 batch_size = 96
 dev_batch_size = 96
-max_iterations = 300000
+max_iterations = 200000
 test_iterations = 1000
 initial_learning_rate = .0005
 lr_decay = .5
