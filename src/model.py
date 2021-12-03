@@ -119,6 +119,6 @@ class LinearDecoder(nn.Module):
         """
             input: [batch_size, input_size]
         """
-        linear_output = self.dropout_layer(self.linear(classifier_input))
+        linear_output = self.dropout_layer(self.linear(self.sigmoid(classifier_input)))
         logsoftmax_output = self.logsoftmax(linear_output) # (batch_size, output_size)
         return logsoftmax_output

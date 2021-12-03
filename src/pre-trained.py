@@ -5,13 +5,13 @@ import os
 import pandas as pd
 import tqdm
 
-# # character-tokenised
-# bertjapanese = AutoModel.from_pretrained("cl-tohoku/bert-base-japanese-char")
-# tokenizer = AutoTokenizer.from_pretrained("cl-tohoku/bert-base-japanese-char")
+# character-tokenised
+bertjapanese = AutoModel.from_pretrained("cl-tohoku/bert-base-japanese-char")
+tokenizer = AutoTokenizer.from_pretrained("cl-tohoku/bert-base-japanese-char")
 
-# word-tokenised
-bertjapanese = AutoModel.from_pretrained("cl-tohoku/bert-base-japanese")
-tokenizer = AutoTokenizer.from_pretrained("cl-tohoku/bert-base-japanese")
+# # word-tokenised
+# bertjapanese = AutoModel.from_pretrained("cl-tohoku/bert-base-japanese")
+# tokenizer = AutoTokenizer.from_pretrained("cl-tohoku/bert-base-japanese")
 
 # Hyper parameters
 batch_size = 128
