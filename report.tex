@@ -206,11 +206,13 @@ We decompose the usual encoder-decoder, using the encoder output as the basis fo
 
 \subsubsection{Autoencoder-Reconstructor plus Classifier}
 
-The choice of the hyper-parameter representing the weight of formality label loss in the total loss was initially chosen to be $.5$. We found that under such a split, the reconstruction performance was barely affected affected ($63.2$ BLEU score, compared to $.648$ without classification loss). The classification accuracy at $.800$ is somewhat poor, comparable to what we achieved from the pre-trained encoder $.816$, but disappointing when considering that the encoder was being fine-tuned under this new setting.
+The choice of the hyper-parameter representing the weight of formality label loss in the total loss was initially chosen to be $.5$. We found that under such a split, the reconstruction performance was somewhat affected ($72.6$ BLEU score, compared to $79.2$ without classification loss). The classification accuracy at $.995$ is extremely good and achieves our objectives completely .
 
-Is the translation task interfering with formality classification? We try to answer that question by turning off the decoder and training the model only on the classification loss. To our surprise, classification accuracy remained roughly the same with the decoder turned off, at $.799$. There are multiple potential reasons for such an observed effect: it is possible that the transformer encoder (or token embedding sequences in general) do not preserve sentence formality well; it could be that sentence formality is preserved, but not linearly and therefore our classifier was unable to extract that information; finally, the noise level of our procedurally-generated formality labels may have played a role in limiting the potential of any classifier trained on our data.
-
-Is a linear classifier not powerful enough? We tried answering this question by adding a feed-forward layer to our classifier. The classification accuracy of the resulting system is similar to the one with a linear classifier, but the sentence regeneration quality significantly reduced: BLEU dropped to $41.6$. 
+translation weight $9$, formality label accuracy $.992$, BLEU score $68.6$
+translation weight $3$, formality label accuracy $.995$, BLEU score $73.0$
+translation weight $1$, formality label accuracy $.995$, BLEU score $72.6$
+translation weight $.1$, formality label accuracy $.993$, BLEU score $69.0$
+translation weight $.01$, formality label accuracy $.993$, BLEU score $54.9$
 
 \subsection{Formality Autoencoder}
 
