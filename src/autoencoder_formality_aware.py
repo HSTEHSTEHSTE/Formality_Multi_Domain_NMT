@@ -55,9 +55,11 @@ ja_dictionary_size = len(ja_dict)
 ja_embedding = nn.Embedding(ja_dictionary_size, embed_dim, padding_idx=1) # 1: default pad value
 
 # Build encoder, decoder and classifier objects
-encoder = model.TransformerEncoder(ja_dictionary_size, embed_dim, 1, device=device, pad_index=ja_dict.pad()).to(device=device)
+# encoder = model.TransformerEncoder(ja_dictionary_size, embed_dim, 1, device=device, pad_index=ja_dict.pad()).to(device=device)
+encoder = torch.load('encoder.pt')
 decoder = model.TransformerDecoder(ja_dictionary_size, embed_dim, 1, device, pad_index=ja_dict.pad()).to(device=device)
-classifier = model.LinearDecoder(embed_dim * max_sentence_length, 2).to(device=device)
+# classifier = model.LinearDecoder(embed_dim * max_sentence_length, 2).to(device=device)
+classifier = torch.load('classifier.pt')
 
 # Load data
 data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), corpus_file), header=None, index_col=None, delimiter='\\|\\|').dropna()
@@ -71,7 +73,7 @@ train_data_array = data_array.iloc[(dev_size + test_size):]
 
 # Build criterion and optimiser
 criterion = torch.nn.NLLLoss(ignore_index=1)
-optimiser = torch.optim.Adam(list(encoder.parameters()) + list(decoder.parameters()), lr=initial_learning_rate, weight_decay=0)
+optimiser = torch.optim.Adam(list(decoder.parameters()), lr=initial_learning_rate, weight_decay=0)
 softmax_decoder_output = torch.nn.LogSoftmax(dim = 2)
 previous_loss = None
 lr = initial_learning_rate
@@ -167,6 +169,11 @@ for iteration_number in range(0, max_iterations):
     loss += criterion(dev_classifier_output, dev_formality_tensors)
     total_dev_loss += loss.item()
 
+    # reclassify formality
+    output_encoding, pad_mask = encoder(torch.cat([dev_sentence_tensors[:, 0].unsqueeze(1), decoder_output], dim = 1))
+    new_classes = classifier(output_encoding.view(batch_size, -1))
+    loss += criterion(dev_classifier_output, dev_formality_tensors) * 10
+
     # calculate dev loss, update learning rate
     if (iteration_number + 1) % print_every == 0:
         print("Iteration ", iteration_number + 1, " , loss is ", total_loss / print_every)
@@ -191,6 +198,10 @@ for iteration_number in range(0, max_iterations):
         formality_accuracy = torch.div(torch.sum((formality == dev_formality_tensors).float()), formality.shape[0])
         print("Dev formality accuracy: ", formality_accuracy.item())
 
+        recalculated_formality = torch.argmax(new_classes, dim=1)
+        formality_accuracy = torch.div(torch.sum((recalculated_formality == dev_formality_tensors).float()), formality.shape[0])
+        print("Dev reconstruction formality accuracy: ", formality_accuracy.item())
+
         for index, dev_sentence in enumerate(decoder_output):
             sentence_characters = ja_dict.string(dev_sentence)
             hyps.append(sentence_characters.split())
@@ -205,9 +216,7 @@ for iteration_number in range(0, max_iterations):
             break
 
 # save trained models
-torch.save(encoder, 'encoder.pt')
 torch.save(decoder, 'decoder.pt')
-torch.save(classifier, 'classifier.pt')
 
 # do one pass over the test corpus
 refs = []

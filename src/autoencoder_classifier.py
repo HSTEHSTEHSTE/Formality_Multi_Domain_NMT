@@ -16,18 +16,18 @@ batch_size = 16
 dev_batch_size = 16
 max_iterations = 10000
 test_iterations = 1000
-initial_learning_rate = .001
+initial_learning_rate = .0001
 lr_decay = .5
 lr_threshold = .00001
 print_every = 10
 embed_dim = 256
 max_sentence_length = 15
 use_gpu = True
-translation_loss_weight = .1
+translation_loss_weight = .01
 device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
-corpus_file = "data/combined_with_label.txt"
+corpus_file = "data/combined_with_label_simple.txt"
 corpus_file_length = 575124 # 434407 raw # 2823 para # 575124 combined
-out_file = "data/autoencoder_output.txt"
+out_file = "data/autoencoder_output_simple.txt"
 
 # Build config objects
 config = TransformerConfig() # default config
@@ -72,7 +72,8 @@ train_data_array = data_array.iloc[(dev_size + test_size):]
 
 # Build criterion and optimiser
 criterion = torch.nn.NLLLoss(ignore_index=1)
-optimiser = torch.optim.Adam(list(encoder.parameters()) + list(decoder.parameters()), lr=initial_learning_rate, weight_decay=0)
+criterion_classifier = torch.nn.NLLLoss()
+optimiser = torch.optim.Adam(list(encoder.parameters()) + list(decoder.parameters()) + list(classifier.parameters()), lr=initial_learning_rate, weight_decay=0)
 softmax_decoder_output = torch.nn.LogSoftmax(dim = 2)
 previous_loss = None
 lr = initial_learning_rate
@@ -119,12 +120,12 @@ for iteration_number in range(0, max_iterations):
     # main forward pass
     loss = torch.tensor(0.).to(device=device)
     memory, pad_mask = encoder(sentence_tensors)
-    classifier_output = classifier((memory + (-1 * pad_mask.float() + 1).unsqueeze(2)).view(sentence_tensors.shape[0], -1))
+    classifier_output = classifier((memory * (-1 * pad_mask.float() + 1).unsqueeze(2)).view(sentence_tensors.shape[0], -1))
 
     # teacher forcing
     decoder_output = softmax_decoder_output(decoder(sentence_tensors[:, :-1], memory, pad_mask))
     loss = translation_loss_weight * criterion(decoder_output.view(-1, decoder_output.shape[2]), sentence_tensors[:, 1:].reshape(-1).long())
-    loss += criterion(classifier_output, formality_tensors)
+    loss += criterion_classifier(classifier_output, formality_tensors)
 
     total_loss += loss.item()
     loss.backward()
@@ -145,7 +146,7 @@ for iteration_number in range(0, max_iterations):
     # dev forward pass
     loss = torch.tensor(0.).to(device=device)
     memory, pad_mask = encoder(dev_sentence_tensors)
-    dev_classifier_output = classifier((memory + (-1 * pad_mask.float() + 1).unsqueeze(2)).view(dev_sentence_tensors.shape[0], -1))
+    dev_classifier_output = classifier((memory * (-1 * pad_mask.float() + 1).unsqueeze(2)).view(dev_sentence_tensors.shape[0], -1))
     decoder_output = torch.tensor(ja_dict.bos()).unsqueeze(0).long().repeat(dev_sentence_tensors.shape[0], 1).to(device=device) # (batch_size, 1)
     has_reached_eos = torch.ones([dev_sentence_tensors.shape[0], 1]).to(device=device) # (batch_size, 1)
     eoses = torch.tensor(ja_dict.eos()).unsqueeze(0).long().repeat(dev_sentence_tensors.shape[0], 1).to(device=device) # (batch_size, 1)
@@ -155,7 +156,7 @@ for iteration_number in range(0, max_iterations):
         has_reached_eos = has_reached_eos * ((dev_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
         loss += translation_loss_weight * criterion(next_output[:, -1, :], dev_sentence_tensors[:, output_index].long())
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
-    loss += criterion(dev_classifier_output, dev_formality_tensors)
+    loss += criterion_classifier(dev_classifier_output, dev_formality_tensors)
     total_dev_loss += loss.item()
 
     # calculate dev loss, update learning rate
@@ -218,7 +219,7 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
     # test forward pass
     loss = torch.tensor(0.).to(device=device)
     memory, pad_mask = encoder(test_sentence_tensors)
-    test_classifier_output = classifier((memory + (-1 * pad_mask.float() + 1).unsqueeze(2)).view(test_sentence_tensors.shape[0], -1))
+    test_classifier_output = classifier((memory * (-1 * pad_mask.float() + 1).unsqueeze(2)).view(test_sentence_tensors.shape[0], -1))
     decoder_output = torch.tensor(ja_dict.bos()).unsqueeze(0).long().repeat(test_sentence_tensors.shape[0], 1).to(device=device) # (batch_size, 1)
     has_reached_eos = torch.ones([test_sentence_tensors.shape[0], 1]).to(device=device) # (batch_size, 1)
     eoses = torch.tensor(ja_dict.eos()).unsqueeze(0).long().repeat(test_sentence_tensors.shape[0], 1).to(device=device) # (batch_size, 1)
@@ -228,7 +229,7 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
         has_reached_eos = has_reached_eos * ((test_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
         loss += translation_loss_weight * criterion(next_output[:, -1, :], test_sentence_tensors[:, output_index].long())
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
-    loss += criterion(test_classifier_output, test_formality_tensors)
+    loss += criterion_classifier(test_classifier_output, test_formality_tensors)
     total_test_loss += loss.item()
 
     # Log output sentences
@@ -243,6 +244,10 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
 for index, hyp in enumerate(hyps):
     write_line = ''.join(hyp) + ' || ' + ''.join(refs[index][0]) + ' || ' + str(ref_labels[index])
     out_file.write(write_line + '\n')
+
+# save trained models
+torch.save(encoder, 'encoder.pt')
+torch.save(classifier, 'classifier.pt')
 
 test_loss = total_test_loss / test_iterations
 print("Test loss is ", test_loss)

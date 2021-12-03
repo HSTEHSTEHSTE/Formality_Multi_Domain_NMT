@@ -4,6 +4,7 @@ import Mykytea
 import os
 from tqdm import tqdm
 from nltk.tokenize import sent_tokenize
+import random
 
 # informal -> polite example
 # input (informal):
@@ -631,13 +632,11 @@ for n, line in tqdm(enumerate(data_file), total=239458):
     if ".alml" not in s and len(en) > 0:
         processed = process(s, mk)
         if processed == 1:
-            formality_bins[1] += 1
             sentences = tokenise_sentence(s)
             for sentence in sentences:
                 ja_sentences.append(sentence)
                 informal_file.write(sentence + '\n')
         elif processed == 0:
-            formality_bins[0] += 1
             sentences = tokenise_sentence(s)
             for sentence in sentences:
                 ja_sentences.append(sentence)
@@ -651,5 +650,9 @@ for n, line in tqdm(enumerate(data_file), total=239458):
         # detect noisy alignments where sentence numbers are different
         if len(en_sentences) == len(ja_sentences):  
             for sentence_num, sentence in enumerate(ja_sentences):
-                write_content = sentence.replace(' ', '') + ' || ' + en_sentences[sentence_num] + ' || ' + str(processed)
-                combined_file.write(write_content + '\n')
+                if processed == 1 or random.random() > .75:
+                    write_content = sentence.replace(' ', '') + ' || ' + en_sentences[sentence_num] + ' || ' + str(processed)
+                    combined_file.write(write_content + '\n')
+                    formality_bins[processed] += 1
+
+print(formality_bins)
