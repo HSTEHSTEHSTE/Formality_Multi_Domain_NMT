@@ -13,6 +13,10 @@
 \usepackage{graphicx}
 \usepackage{indentfirst}
 \usepackage[dvipsnames]{xcolor}
+\usepackage{xeCJK}
+\setCJKmainfont{IPAMincho}
+\setCJKsansfont{IPAGothic}
+\setCJKmonofont{IPAGothic}
 
 \usepackage{listings}
 
@@ -283,6 +287,36 @@ We propose a number of different ways to evaluate the translation quality and th
 \subsection{Alignment BLEU score}
 
 We use the NLTK toolkit \cite{NLTK} to evaluate the BLEU score of our translations or sentence reconstructions. BLEU score is calculated as the proportion of n-gram overlaps between the hypothesis and the reference; due to only having a single sentence per training data point, such a score is not necessarily a good estimate of the model quality. It also doesn't have a good correlation with sentence formality.
+
+\subsection{Manual, Human Evaluation}
+To manually evaluate the translations with human eyes, we randomly sampled 261 (an arbitrary but large enough number) sentences. Among these sentences, we noticed certain patterns in both successful translations and potentially questionable ones. 
+
+The first type of common difficulty was cases where the Japanese sentences omitted some sort of information in the sentence, likely due to it being obvious contextually. Unfortunately for the machine, it is not given this context, so it must sometimes translate incomplete sentences and essentially make an educated guess at certain contexts. Sometimes, it actually manages to do a good job at this, preserving the overall meaning of the phrase. For example:
+
+5百万回も見られることになりました  is translated into
+
+Seen five million times.
+
+I this case, the Japanese sentence is missing a subject. “Seen five million times” is a good word-for-word translation, but any Japanese person would understand that there’s some object that being seen. Without contextual knowledge, the best way to handle this may be to use a generic pronoun, such as “it,” creating the sentence, “it will be seen five million times.” In this sentence specifically, the information contained in “will be” is also missing from our translation. Many other translations of this same structure were also missing tense information though, so we suspect that it has something to do with time-determiners like “will” or “has” are treated as attached to a subject and would be missing should the subject be missing.
+
+There are some sentences where the translation loses information, though in many of these cases, the translation in still reasonable and sometimes even more reasonable without context. For example:
+
+何するんだサイラス is translated into
+
+What are you doing Cyrus?
+
+The translation provided in the parallel corpus is, “what the hell are you doing, Cyrus?” The “the hell” part got left out, but there’s no word in the Japanese sentence the means “the hell.” That information would entirely be gained from context or tone. As such, this is an interesting case where context-aside, the machine translation might be considered better than what a BLEU or RIBES score might say. Of course, this still speaks to the machine’s weakness in situations where it does need to know context.
+
+Finally, there are some sentences where the translation adds information. These are rare, and it’s hard to find a pattern in why it’s occurring, as the situations in which it occurs are varied. Often times the additions are conjunctions or articles rather than full on noun or verb phrases. For example:
+
+ジョーンズは味方だよ is translated into
+
+and jones is on our side.
+
+The translation is pretty accurate, but the “and” is completely new information created by the translator. One could suspect that it has something to do with Katakana being present in the sentences, as Katakana is often used to loan/foreign words that needs to just be sounded out. This happens in cases without Katakana, and the Katakana is those cases is usually translated correctly without showing any other obvious errors stemming from an issue relating to its use, so we think that this is not the case. 
+
+	The patterns mentioned are the ones seen most often when the translations are close but not perfect. Aside from these, most incorrect translations just fail to capture the meaning entirely or are absurd. Some are closer than others, of course, but once they’re not close enough to correct, it’s difficult to spot meaningful patterns.
+
 
 \subsection{Sentence Embedding Similarity}
 
