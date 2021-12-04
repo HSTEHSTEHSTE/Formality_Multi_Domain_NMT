@@ -11,7 +11,7 @@ import nltk
 from nltk.tokenize import word_tokenize
 import MeCab
 from bpemb import BPEmb
-from konlpy.tag import Kkma
+from konlpy.tag import Hannanum
 
 # Hyper parameters
 batch_size = 96
@@ -25,17 +25,18 @@ print_every = 1000
 embed_dim = 512
 max_sentence_length = 30
 use_gpu = True
-device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
-corpus_file = "data/ko_en_tagged_short.txt"
+device = torch.device('cpu')
+#device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
+corpus_file = "data/ko_en_tagged_60k.txt"
 corpus_file_length = 60000 #69430 full, 60000 short
 
 # Build config objects
 config = TransformerConfig() # default config
 
-kkma = Kkma()
+hannanum = Hannanum()
 # Build dictionary
 def line_tokeniser(line):
-    return kkma.morphs(line.encode('utf-8').strip())
+    return hannanum.morphs(line.encode('utf-8').strip())
 
 bpemb_en = BPEmb(lang="en", dim=50)
 def en_tokeniser(line):
@@ -57,9 +58,18 @@ for line in tqdm.tqdm(data_file, total=corpus_file_length):
 ko_dict.finalize()
 en_dict.finalize()
 
+f1 = open('ko_dict.txt', 'w', encoding='utf-8')
+f2 = open('en_dict.txt', 'w', encoding='utf-8')
+
+ko_dict.save(f1)
+en_dict.save(f2)
+
 # Build word embedding
 # Use naive pytorch embedding
 ko_dictionary_size = len(ko_dict)
+print('ko_dictionary_size: ' + str(ko_dictionary_size))
+print(ko_dict.pad())
+print(en_dict.pad())
 ko_embedding = nn.Embedding(ko_dictionary_size, embed_dim, padding_idx=1) # 1: default pad value
 
 en_dictionary_size = len(en_dict)
@@ -97,7 +107,7 @@ for iteration_number in range(0, max_iterations):
     for sentence_label_pair in batch_array.iterrows():
         # [ko], [EN], label
         # sentence = ' '.join(sentence_label_pair[1].iloc[0])
-        sentence = ' '.join(kkma.morph(sentence_label_pair[1].iloc[0]))
+        sentence = ' '.join(hannanum.morphs(sentence_label_pair[1].iloc[0]))
         sentence_tensor = ko_dict.encode_line(sentence, append_eos=True) # (len(sentence) + 1)
         sentence_tensor = torch.cat([torch.tensor([ko_dict.bos()]), sentence_tensor])
         
@@ -143,7 +153,7 @@ for iteration_number in range(0, max_iterations):
         # [ko], [EN], label
         refs.append([en_tokeniser(sentence_label_pair[1].iloc[1])])
 
-        dev_sentence = ' '.join(kkma.morph(sentence_label_pair[1].iloc[0]))
+        dev_sentence = ' '.join(hannanum.morphs(sentence_label_pair[1].iloc[0]))
         dev_sentence_tensor = ko_dict.encode_line(dev_sentence, append_eos=True) # (len(sentence) + 1)
         dev_sentence_tensor = torch.cat([torch.tensor([ko_dict.bos()]), dev_sentence_tensor])
         #dev_sentence_lengths.append(min(max_sentence_length, dev_sentence_tensor.shape[0]))
@@ -228,7 +238,7 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
     for sentence_label_pair in test_batch_array.iterrows():
         # [ko], [EN], label
         # test_sentence = ' '.join(sentence_label_pair[1].iloc[0])
-        test_sentence = ' '.join(kkma.morph(sentence_label_pair[1].iloc[0]))
+        test_sentence = ' '.join(hannanum.morphs(sentence_label_pair[1].iloc[0]))
         refs.append([en_tokeniser(sentence_label_pair[1].iloc[1])])
         test_sentence_tensor = ko_dict.encode_line(test_sentence, append_eos=True) # (len(sentence) + 1)
         test_sentence_tensor = torch.cat([torch.tensor([ko_dict.bos()]), test_sentence_tensor])
