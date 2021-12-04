@@ -232,6 +232,17 @@ The loss function of this task is composed again of $2$ parts: the sentence reco
 The baseline approach (the decoder that was trained jointly with the encoder-classifier) was able to achieve a $.813$ accuracy on reconstruted sentence formality accuracy, whereas the one trained on the revised objective only achieved a $.763$ accuracy. This is despite the system reporting a confidence of $.923$ about having generated the sentences with the correct formality. As such, we conclude that the joint training scheme was ineffective at assuring translated sentence formality.  
 
 
+$.75$ weight, $.724$ accuracy, $72.8$ BLEU
+$.5$ weight, $.763$ accuracy, $71.1$ BLEU
+$.09$ weight, $.814$ accuracy, $76.0$ BLEU
+
+\subsubsection{Multiplicative formality mask}
+
+We next experiment with a slightly different 
+
+$.5$ weight, $.620$ accuracy, $81.2$ BLEU
+$.09$ weight, $.776$ accuracy, $75.0$ BLEU
+
 \subsection{Formality-Aware Translation}
 
 This is the generalised version of the formality autoencoder, where the target language is different from the source language (finally the true translation setting). We compare the results with the base translation model without formality labels.

@@ -486,7 +486,7 @@ load_pattern_map()
 
 # ************************************ #
 # Process align corpus
-data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/autoencoder_output_simple.txt"), "r", encoding="utf-8")
+data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/autoencoder_output_formality_aware.txt"), "r", encoding="utf-8")
 
 total_accurate = 0
 total = 0
