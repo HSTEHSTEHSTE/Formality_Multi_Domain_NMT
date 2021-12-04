@@ -231,18 +231,20 @@ The loss function of this task is composed again of $2$ parts: the sentence reco
 
 The baseline approach (the decoder that was trained jointly with the encoder-classifier) was able to achieve a $.813$ accuracy on reconstruted sentence formality accuracy, whereas the one trained on the revised objective only achieved a $.763$ accuracy. This is despite the system reporting a confidence of $.923$ about having generated the sentences with the correct formality. As such, we conclude that the joint training scheme was ineffective at assuring translated sentence formality.  
 
+Below is a table detailing the results we got with different reconstruct loss weight ratio. We found similar (lack of) formality awareness improvement for any choice of weights. 
+
 \begin{tabular}{ c c c c }
     Reconstruction loss weight & Formality reconstruction accuracy & BLEU score \\
-    $.9$ & $0$ & $0$ \\
+    $.9$ & $.754$ & $74.6$ \\
     $.75$ & $.724$ & $72.8$ \\
     $.5$ & $.763$ & $71.1$ \\
     $.09$ & $.814$ & $76.0$ \\
-    $.0099$ & $0$ & $0$ \\
+    $.0099$ & $.760$ & $76.8$ \\
 \end{tabular}
 
 \subsubsection{Multiplicative formality mask}
 
-We next experiment with a slightly different 
+We next experiment with a slightly different setup: applying a multiplicative "formality mask" to the encoder output before passing it to the decoder. For each sentence, depending on the output of the classifier, a different formality mask would be applied. We record the outcome of our experiments here below:
 
 \begin{tabular}{ c c c c }
     Reconstruction loss weight & Formality reconstruction accuracy & BLEU score \\
