@@ -22,7 +22,7 @@ print_every = 10
 embed_dim = 256
 max_sentence_length = 15
 use_gpu = True
-translation_loss_weight = 3.
+translation_loss_weight = 1.
 device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
 corpus_file = "data/combined_with_label_simple.txt"
 corpus_file_length = 575124 # 434407 raw # 2823 para # 575124 combined
@@ -62,7 +62,7 @@ decoder = model.TransformerDecoder(ja_dictionary_size, embed_dim, 1, device, pad
 classifier = torch.load('classifier.pt')
 
 # Formality masks
-formality_mask = torch.rand([2, max_sentence_length, embed_dim]).to(device=device)
+formality_mask = torch.rand([2, max_sentence_length, embed_dim], dtype=torch.bool).float().to(device=device)
 
 # Load data
 data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), corpus_file), header=None, index_col=None, delimiter='\\|\\|').dropna()

@@ -242,20 +242,31 @@ Below is a table detailing the results we got with different reconstruct loss we
     $.0099$ & $.760$ & $76.8$ \\
 \end{tabular}
 
-\subsubsection{Multiplicative formality mask}
+\subsubsection{Multiplicative formality embedding}
 
-We next experiment with a slightly different setup: applying a multiplicative "formality mask" to the encoder output before passing it to the decoder. For each sentence, depending on the output of the classifier, a different formality mask would be applied. We record the outcome of our experiments here below:
+We next experiment with a slightly different setup: applying a multiplicative "formality embedding" to the encoder output before passing it to the decoder. For each sentence, depending on the output of the classifier, a different formality embedding would be applied. The formality embeddings are initialised between $(0, 1)$ randomly, and then learned throughout training. We record the outcome of our experiments here below:
 
 \begin{tabular}{ c c c c }
     Reconstruction loss weight & Formality reconstruction accuracy & BLEU score \\
-    $.9$ & $0$ & $0$ \\
-    $.75$ & $0$ & $0$ \\
-    $.5$ & $.620$ & $81.2$ \\
+    $.9$ & $.804$ & $70.0$ \\
+    $.75$ & $.737$ & $68.7$ \\
+    $.5$ & $.727$ & $76.0$ \\
     $.09$ & $.776$ & $75.0$ \\
-    $.0099$ & $0$ & $0$ \\
+    $.0099$ & $.775$ & $74.3$ \\
 \end{tabular}
 
-\subsubsection{Additive formality mask}
+We observe that such an embedding scheme was not effective at helping our reconstruction model be more formality-aware. We next try a slightly different formality embedding where the initial values are initialised randomly among ${0, 1}$. The results are as follows:
+
+\begin{tabular}{ c c c c }
+    Reconstruction loss weight & Formality reconstruction accuracy & BLEU score \\
+    $.9$ & $.$ & $.$ \\
+    $.75$ & $.$ & $.$ \\
+    $.5$ & $.$ & $.$ \\
+    $.09$ & $.$ & $.$ \\
+    $.0099$ & $.$ & $.$ \\
+\end{tabular}
+
+\subsubsection{Additive formality embedding}
 
 \subsection{Formality-Aware Translation}
 
