@@ -486,7 +486,7 @@ load_pattern_map()
 
 # ************************************ #
 # Process align corpus
-data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/autoencoder_output.txt"), "r", encoding="utf-8")
+data_file = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data/autoencoder_output_simple.txt"), "r", encoding="utf-8")
 
 total_accurate = 0
 total = 0
@@ -497,7 +497,8 @@ for n, line in tqdm(enumerate(data_file), total=16000):
     formality_ref = int(elements[2])
     processed = process(s_output, mk)
     # if processed != .5:
-    if len(s_input) < 16:
+    # if len(s_input) < 16:
+    if True:
         total += 1
         if processed == formality_ref:
             total_accurate += 1
