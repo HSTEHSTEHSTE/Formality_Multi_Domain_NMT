@@ -274,6 +274,12 @@ Instead of applying the learned formality attention multiplicatively on the enco
 
 We observe that with an appropriate choice of weights, our model is able to achieve strong reconstruction BLEU score ($77.6$, compared to the baseline of $73.0$) while improving on formality reconstruction accuracy ($.830$ compared to the baseline $.813$). It is difficult to tell how much of that improvement is due to increased sentence reconstruction quality, and by extension a larger proportion of sentences having measurable formality cues (appropriately conjugated verbs and adjectives) that were picked up by our procedural formality classifier.
 
+What does the additive formality embedding look like? We take the difference between the learned formal embedding and the learned informal embeddinng, setting the weight distribution to the optimum that we found previously ($.75$ sentence reconstruction loss weight). We graph the difference which is shown as follows:
+
+\includegraphics{formality_embedding.png}
+
+It is clear that the learned formality embedding was non-trivial. The difference between the formal and the informal embeddings also appear to be closer for neighbouring positions in the sentence (y-axis), consistent with what our procedural formality classifier does (looking out for the conjugation of the final verb).
+
 We also observe the surprising consistent increase in sentence reconstruction BLEU score. Not only is our decoder able to recover from the additive embedding (a linear shift in the word embedding space), it seems to be able to leverage that information to generate more accurate sentences. It is worth studying whether such a phenomenon can be generalised into other cases with other classes, potentially ones that were generated in unsupervised fashion and/or those that do not have linguistic significance, and leveraged to improve translation quality.
 
 \subsection{Formality-Aware Translation}
