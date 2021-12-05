@@ -18,8 +18,8 @@ import subprocess
 # Hyper parameters
 batch_size = 64
 dev_batch_size = 64
-max_iterations = 20000
-test_iterations = 1000
+max_iterations = 10000
+test_iterations = 100
 initial_learning_rate = .0005
 lr_decay = .5
 lr_threshold = .00001
@@ -71,11 +71,12 @@ en_dictionary_size = len(en_dict)
 en_embedding = nn.Embedding(en_dictionary_size, embed_dim, padding_idx=1)
 
 # Build encoder and decoder objects
-encoder = torch.load('encoder_big.pt')
-decoder = torch.load('decoder_big.pt')
+encoder = torch.load('encoder_512.pt')
+decoder = torch.load('decoder_en.pt')
 encoder_back = model.TransformerEncoder(en_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=en_dict.pad(), dropout=.3).to(device=device)
 decoder_back = model.TransformerDecoder(ja_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=ja_dict.pad(), dropout=.4).to(device=device)
-classifier = model.LinearDecoder(embed_dim * max_sentence_length, 2).to(device=device)
+# classifier = model.LinearDecoder(embed_dim * max_sentence_length, 2).to(device=device)
+classifier = torch.load('classifier_512.pt')
 
 # Load data
 data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), corpus_file), header=None, index_col=None, delimiter='\\|\\|').dropna()
@@ -90,7 +91,7 @@ train_data_array = data_array.iloc[dev_size + test_size:]
 # Build criterion and optimiser
 criterion = torch.nn.CrossEntropyLoss(ignore_index=en_dict.pad(), label_smoothing=.3)
 criterion_classifier = torch.nn.NLLLoss()
-optimiser = torch.optim.Adam(list(encoder_back.parameters()) + list(decoder_back.parameters()) + list(classifier.parameters()), lr=initial_learning_rate, weight_decay=0)
+optimiser = torch.optim.Adam(list(encoder_back.parameters()) + list(decoder_back.parameters()), lr=initial_learning_rate, weight_decay=0)
 softmax_decoder_output = torch.nn.LogSoftmax(dim = 2)
 previous_loss = None
 lr = initial_learning_rate
@@ -151,6 +152,8 @@ for iteration_number in range(0, max_iterations):
     memory, pad_mask = encoder_back(en_sentence_tensors)
     decoder_output = softmax_decoder_output(decoder_back(sentence_tensors[:, :-1], memory, pad_mask))
     loss = translation_loss_weight * criterion(decoder_output.view(-1, decoder_output.shape[2]), sentence_tensors[:, 1:].reshape(-1).long())
+    memory, pad_mask = encoder(torch.cat([sentence_tensors[:, 0].unsqueeze(1), torch.argmax(decoder_output, dim=2)], dim=1))
+    classifier_output = classifier((memory * (-1 * pad_mask.float() + 1).unsqueeze(2)).view(sentence_tensors.shape[0], -1))
     loss += criterion_classifier(classifier_output, formality_tensors)
 
     total_loss += loss.item()
@@ -180,7 +183,6 @@ for iteration_number in range(0, max_iterations):
         # has_reached_eos = has_reached_eos * ((torch.argmax(next_output[:, -1, :].unsqueeze(1), dim = 2) - eoses) > .5)
         has_reached_eos = has_reached_eos * ((dev_en_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
-    loss += criterion_classifier(dev_classifier_output, dev_formality_tensors)
 
     # dev back translation
     memory, pad_mask = encoder_back(decoder_output)
@@ -193,6 +195,9 @@ for iteration_number in range(0, max_iterations):
         has_reached_eos = has_reached_eos * ((dev_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
         loss += translation_loss_weight * criterion(next_output[:, -1, :], dev_sentence_tensors[:, output_index].long())
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
+    memory, pad_mask = encoder(decoder_output)
+    dev_classifier_output = classifier((memory * (-1 * pad_mask.float() + 1).unsqueeze(2)).view(dev_sentence_tensors.shape[0], -1))
+    loss += criterion_classifier(dev_classifier_output, dev_formality_tensors)
 
     total_dev_loss += loss.item()
 
@@ -222,7 +227,6 @@ for iteration_number in range(0, max_iterations):
         hyps = []
         for index, dev_sentence in enumerate(decoder_output):
             sentence_characters = ja_dict.string(dev_sentence)
-            #print(sentence_characters)
             hyps.append(sentence_characters.split())
 
             print(hyps[index])
@@ -262,7 +266,6 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
         has_reached_eos = has_reached_eos * ((test_en_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
         loss += translation_loss_weight * criterion(next_output[:, -1, :], test_en_sentence_tensors[:, output_index].long())
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
-    loss += criterion_classifier(test_classifier_output, test_formality_tensors)
 
     # test back translation
     memory, pad_mask = encoder_back(decoder_output)
@@ -275,6 +278,9 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
         has_reached_eos = has_reached_eos * ((test_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
         loss += translation_loss_weight * criterion(next_output[:, -1, :], test_sentence_tensors[:, output_index].long())
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
+    memory, pad_mask = encoder(decoder_output)
+    test_classifier_output = classifier((memory * (-1 * pad_mask.float() + 1).unsqueeze(2)).view(test_sentence_tensors.shape[0], -1))
+    loss += criterion_classifier(test_classifier_output, test_formality_tensors)
 
     total_test_loss += loss.item()
 
