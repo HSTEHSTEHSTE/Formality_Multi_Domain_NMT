@@ -284,15 +284,28 @@ It is clear that the learned formality embedding was non-trivial. The difference
 
 We also observe the surprising consistent increase in sentence reconstruction BLEU score. Not only is our decoder able to recover from the additive embedding (a linear shift in the word embedding space), it seems to be able to leverage that information to generate more accurate sentences. It is worth studying whether such a phenomenon can be generalised into other cases with other classes, potentially ones that were generated in unsupervised fashion and/or those that do not have linguistic significance, and leveraged to improve translation quality.
 
-\subsection{Formality-Aware Translation}
+\subsection{Back Translation}
 
-This is the generalised version of the formality autoencoder, where the target language is different from the source language (finally the true translation setting). We compare the results with the base translation model without formality labels.
+We finally move on to our goal of building a formality-aware translator. The problem with this is, we do not have parellel corpora between two strongly formality-typed languages (such as Japanese and Korean), which would allow us to use our procedural formality tagger to determine the quality of the formality-aware translation by our model. 
+
+In order to get around this problem, we built a formality-aware back-translator. The model consists of two parts that are trained sequentially: a forward-translator and classifier, which takes a strongly formality-typed sentence (in our case, Japanese) and outputs a translation (in English) as well as a formality class; a backward-translator, which takes a sentence in the target language (English) and translates it back to the source language (Japanese). The output of the entire pipeline could then be evaluated for its formality awareness.
+
+For our base Japanese to English translator-classifier, we use the same model architecture as the one we trained for section $3.1$. We were able to achieve $24.4$ BLEU score (compared to $26.3$ for the baseline translator without classifier), while the formality classification accuracy was $.993$, comparable to the one trained alongside Japanese autoencoders. 
+
+We next build a vanilla backward-translator that was trained solely on the translation objective. 
 
 \subsection{Formality-Aware back-translation}
 
-$18.2$ BLEU score, $29.0$ RIBES score, $.236$ formality reconstruction accuracy. 
+We add the formality awareness joint training objective to the base backward-translator, adding a loss term according to whether the pre-trained encoder-classifier considers the back-translated sentence to have the correct formality. We were able to achieve $18.2$ BLEU score, $29.0$ RIBES score (pleae refer to section $4$ for details), as well as $.236$ formality reconstruction accuracy. As mentioned previously, formality reconstruction accuracy is often upper-bounded by the quality of the translation: a translated sentence that was so malformed that it lacks a formality cue (such as a properly conjugated verb) would obviously fail the formality awareness test. However we note that this is not the case here. We observe the following:
 
-\section{Evaluation}
+\begin{enumerate}[label=\arabic*]
+    \item The model was relatively unconfident about its formality awareness (the pre-trained encoder-classifier gave a formality accuracy of around $60\%$)
+    \item While the back-translation quality was poor, the sentences are generally grammatical and contain a properly-conjugated final verb (as assessed by a human on a random sample of $100$ sentences)
+\end{enumerate}
+
+We therefore conclude that there is potential for more aggressive formality forcing on the backward-translator, and that formality awareness was not predominantly constrained by translation quality.
+
+\section{Evaluation metrics}
 
 We propose a number of different ways to evaluate the translation quality and the sentence reconstruction quality for our different tasks. We analyse the level of correlation between these different metrics on different tasks.
 

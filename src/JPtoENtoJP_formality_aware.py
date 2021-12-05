@@ -33,6 +33,9 @@ corpus_file_length = 131687 # simple # 575124 total # 434407 raw # 2823 para # 5
 out_file = "data/autoencoder_output_simple.txt"
 translation_loss_weight = 1.
 
+# Build config objects
+#config = TransformerConfig() # default config
+
 # Build dictionary
 tokeniser = MeCab.Tagger("-Owakati")
 def line_tokeniser(line):
@@ -149,6 +152,9 @@ for iteration_number in range(0, max_iterations):
     memory, pad_mask = encoder_back(en_sentence_tensors)
     decoder_output = softmax_decoder_output(decoder_back(sentence_tensors[:, :-1], memory, pad_mask))
     loss = translation_loss_weight * criterion(decoder_output.view(-1, decoder_output.shape[2]), sentence_tensors[:, 1:].reshape(-1).long())
+    memory, pad_mask = encoder(torch.cat([sentence_tensors[:, 0].unsqueeze(1), torch.argmax(decoder_output, dim=2)], dim=1))
+    classifier_output = classifier((memory * (-1 * pad_mask.float() + 1).unsqueeze(2)).view(sentence_tensors.shape[0], -1))
+    loss += criterion_classifier(classifier_output, formality_tensors)
 
     total_loss += loss.item()
     loss.backward()
@@ -189,6 +195,9 @@ for iteration_number in range(0, max_iterations):
         has_reached_eos = has_reached_eos * ((dev_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
         loss += translation_loss_weight * criterion(next_output[:, -1, :], dev_sentence_tensors[:, output_index].long())
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
+    memory, pad_mask = encoder(decoder_output)
+    dev_classifier_output = classifier((memory * (-1 * pad_mask.float() + 1).unsqueeze(2)).view(dev_sentence_tensors.shape[0], -1))
+    loss += criterion_classifier(dev_classifier_output, dev_formality_tensors)
 
     total_dev_loss += loss.item()
 
@@ -220,8 +229,8 @@ for iteration_number in range(0, max_iterations):
             sentence_characters = ja_dict.string(dev_sentence)
             hyps.append(sentence_characters.split())
 
-            # print(hyps[index])
-            # print(refs[index][0])
+            print(hyps[index])
+            print(refs[index][0])
         
         print(nltk.translate.bleu_score.corpus_bleu(refs, hyps, weights=(.34, .33, .33)))
         print(nltk.translate.ribes_score.corpus_ribes(refs, hyps))
@@ -269,6 +278,9 @@ for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iteratio
         has_reached_eos = has_reached_eos * ((test_sentence_tensors[:, output_index].unsqueeze(1) - eoses) > .5)
         loss += translation_loss_weight * criterion(next_output[:, -1, :], test_sentence_tensors[:, output_index].long())
         decoder_output = torch.cat([decoder_output.detach(), torch.argmax(next_output[:, -1, :].detach().unsqueeze(1), dim=2)], dim=1)
+    memory, pad_mask = encoder(decoder_output)
+    test_classifier_output = classifier((memory * (-1 * pad_mask.float() + 1).unsqueeze(2)).view(test_sentence_tensors.shape[0], -1))
+    loss += criterion_classifier(test_classifier_output, test_formality_tensors)
 
     total_test_loss += loss.item()
 
@@ -282,8 +294,8 @@ for index, hyp in enumerate(hyps):
     out_file.write(write_line + '\n')
 
 # save trained models
-torch.save(encoder_back, 'encoder_back_0.pt')
-torch.save(decoder_back, 'decoder_back_0.pt')
+torch.save(encoder_back, 'encoder_back.pt')
+torch.save(decoder_back, 'decoder_back.pt')
 
 test_loss = total_test_loss / test_iterations
 print("Test loss is ", test_loss)
