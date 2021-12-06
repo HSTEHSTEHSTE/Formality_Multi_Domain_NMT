@@ -13,7 +13,10 @@
 \usepackage{graphicx}
 \usepackage{indentfirst}
 \usepackage[dvipsnames]{xcolor}
-\usepackage{CJKutf8}
+\usepackage{xeCJK}
+\setCJKmainfont{IPAMincho}
+\setCJKsansfont{IPAGothic}
+\setCJKmonofont{IPAGothic}
 
 \usepackage{listings}
 
@@ -88,7 +91,6 @@ style=alphabetic,
 
 
 \begin{document}
-\begin{CJK}{UTF8}{min}
 
 \title{Formality-Aware Neural Machine Translation for Japanese-English}
 
@@ -157,21 +159,20 @@ The procedural classification scripts put each sentence into one of $3$ bins (fo
 Due to the nature of the corpora that we chose, informal sentences outnumber formal sentences. We therefore randomly drop some informal sentences so that the number of formal and informal sentences are roughly equal.
 
 \paragraph{Examples of Classified Sentences}
- 
- .
+
+We examine a number of examples which demonstrate the procedure by which we tag the formality of the sentences in the corpus.
 
 Informal: 同情してただけなんだ 
 
-In this example, there are multiple kinds of conjugation occuring in the sentence, but the classifier only cares about the conjugation of what it determines as the final verb: だ. だ endings are always short-form, though it might arise from different situations, so it gets classified as informal. \newline
+In this example, there are multiple kinds of conjugation occuring in the sentence, but the classifier only cares about the conjugation of what it determines as the final verb: だ. だ endings are always short-form, though it might arise from different situations, so it gets classified as informal.
 
 Formal: 別に驚くことではないですよね 
 
-This is an interesting example to pick out because it has more noise at the end. よ and ね are both sentence endings that give nuance to the tone of your statement, but they are not adjectives or verbs, and they do not determine the formality of a sentence. Fortunately, the classifier has no trouble parsing them for what they are, and it ignores them to focus on the final verb です, which is in long form. As such, the sentence is classified at formal.\newline
+This is an interesting example to pick out because it has more noise at the end. よ and ね are both sentence endings that give nuance to the tone of your statement, but they are not adjectives or verbs, and they do not determine the formality of a sentence. Fortunately, the classifier has no trouble parsing them for what they are, and it ignores them to focus on the final verb です, which is in long form. As such, the sentence is classified at formal.
 
 Inconclusive: 四十六　メチルシクロヘキサノン
 
 This is an example of a technical, loan-word term. It doesn't have an equivalent in Japanese, so it's just sounded out, essentially. There's also no verbs or adjectives in the sentence. As such, the classifier can't find a conjugation to consider, and thus deems it inconclusive.
-
 
 \paragraph{Other languages: Korean}
 
@@ -428,6 +429,8 @@ We next experiment with different weights for the translation and formality awar
     $.09$ & $.017$ & $10.3$ & $23.2$ \\
 \end{tabular}
 
+We find our model to be sensitive to hyper-parameter choice, with performance collapsing when the loss weights deviate from the optimal weight distribution ($.5$). 
+
 \subsubsection{Back Translation with Additive Formality Embedding}
 
 Next we experiment with the additive formality embedding scheme, which had yielded superior results for the sentence reconstruction setting. We start of by giving equal weights to back translation loss and formality awareness loss. We measured a BLEU score of $15.8$, a RIBES score of $32.0$, and a formality awareness of $.259$. We observe that while the system's translation quality was relatively unaffected, the formality awareness failed to beat the benchmark of $.382$. We therefore conclude that additive formality embedding is not powerful enough for enforcing formality on the back-translated output.
@@ -456,5 +459,4 @@ A number of other types of context could be used to improve translation quality.
 
 \newpage
 \printbibliography
-\end{CJK}
 \end{document}
