@@ -311,6 +311,10 @@ We therefore conclude that there is potential for more aggressive formality forc
 
 \subsubsection{Back Translation with Multiplicative Formality Embedding}
 
+We next try applying a learned multiplicative formality embedding on the backward encoder output before passing it as argument to the backward decoder, hoping that it would allow us to control the decoder to emit sentences according to their original formality. We were able to get a BLEU score of $14.1$, a RIBES score of $26.6$, and a formality awareness of $.644$: while the base translation quality clear regressed, the formality awareness greatly increased, satisfying our objectives.
+
+\subsubsection{Back Translation with Additive Formality Embedding}
+
 \section{Evaluation metrics}
 
 We propose a number of different ways to evaluate the translation quality and the sentence reconstruction quality for our different tasks. We analyse the level of correlation between these different metrics on different tasks.
