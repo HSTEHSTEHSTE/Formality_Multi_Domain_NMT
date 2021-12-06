@@ -319,6 +319,10 @@ We propose a number of different ways to evaluate the translation quality and th
 
 We use the NLTK toolkit \cite{NLTK} to evaluate the BLEU score of our translations or sentence reconstructions. BLEU score is calculated as the proportion of n-gram overlaps between the hypothesis and the reference; due to only having a single sentence per training data point, such a score is not necessarily a good estimate of the model quality. It also doesn't have a good correlation with sentence formality.
 
+\subsection{Alignment RIBES score}
+
+The NLTK toolkit \cite{NLTK} also supports RIBES score. RIBES evaluates similarly to BLEU, but it is more lenient in terms of the ordering of tokens. This is not to say that RIBES doesn't care about the location of different parts of speech at all; it just doesn't punish it as harshly. This is useful for languages like Japanese, where the purposes of phrases in the sentence are determined by the article/tag characters attached to them rather than through order. As such, we looked at RIBES score as well, and as expected, our RIBES scores were generally about 2 times better than corresponding BLEU scores early into training but only a few points better later on. 
+
 \subsection{Manual, Human Evaluation}
 To manually evaluate the translations with human eyes, we randomly sampled 261 (an arbitrary but large enough number) sentences. Among these sentences, we noticed certain patterns in both successful translations and potentially questionable ones. 
 
