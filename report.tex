@@ -171,11 +171,9 @@ The obvious way of making use of a pre-trained language model for politeness lab
 
 A slightly modified approach would be: for each sentence, we identify and mask each verb (along with its suffix conjugation) and each copula one at a time. We feed the masked sentences to the language model. We then score each sentence based on whether the language model filled the masks with long forms or short forms.
 
-\paragraph{BERT Fine-tuned on Formality Classification}
+\paragraph{Classifier trained on BERT output}
 
-The setup for this experiment is simple: we take a pre-trained Japanese language model and attempt to fine tune it with the sentence-formality label pairs that we generated in section $1.2.1$. We first try viewing this problem as a scoring problem, with the model tuned to produce a score between $0$ and $1$ for each document and with a score greater than $.5$ indicating that the model considers the document to be formal, and vice versa. We tried two different experimental settings, one where ambiguous sentences (those that didn't contain a formality indicator) are mixed in with target score $.5$, the other where ambiguous sentences are not included.
-
-The other approach is to regard the problem as a two-class classification task. We do not introduce a third class of ambiguous sentences under this setting, since it is questionable from a linguistic point of view to label these sentences as "formality-free". This is the approach which we experimented on.
+The setup for this experiment is simple: we take a pre-trained Japanese language model and attempt to use its output to predict the sentence-formality labels that we generated in section $1.2.1$. We first try viewing this problem as a scoring problem, with the model tuned to produce a score between $0$ and $1$ for each document and with a score greater than $.5$ indicating that the model considers the document to be formal, and vice versa. We discard any sentences that were consider ambiguous, thus regarding the problem as a two-class classification task. 
 
 The pre-trained model that we used was BertJapanese, developed by Masatoshi Suzuki at the Tohoku NLP lab and available in the transformers package by huggingface. The model converts a character-tokenised sentence into a $768$-dimension embedding which we use as the output for our classifier. Given the low dimensionality of our output, we choose the simplest model architecture possible: a one-layer perceptron with a non-linearity (sigmoid), a linear layer and a log softmax output processing layer.
 
