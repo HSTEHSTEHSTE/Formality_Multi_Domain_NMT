@@ -177,6 +177,8 @@ The pre-trained model that we used was BertJapanese, developed by Masatoshi Suzu
 
 In our experiments, we were able to achieve a labelling accuracy of $.794$ for our generated formality label data. We observe similar movements in train and dev accuracy and loss during training, as well as comparable test accuracy compared to train and dev accuracy. Given the size of our test data set ($152576$), we believe our results are robust and not the result of any fortuitous statistical event.
 
+\includegraphics{images/pre-trained.jpg}
+
 We compare those results to the ones we achieved from a BERT model based on word tokenisation. The accuracy was comparable to the character-based BERT, at $.787$, however there was a substantial runtime reduction due to word-level tokenised sequences being shorter than character-level tokenised ones (average length of a Japanese word is around $2$ characters, however we would expect - and did observe - speedup less than $50\%$ due to punctuations, numbers, non-Japanese characters, etc.). 
 
 \paragraph{Masking Decisive Verb/Copula}
@@ -196,6 +198,8 @@ A number of possible architectures could be used to integrate the translation ta
 We first build a base translation model that doesn't take formality into account. We will use its performance as a baseline and attempt to beat its performance with our formality-aware model. For test cases where either the source or the target language doesn't have strong formality classes (such as Japanese-English or vice versa), we are only interested in the translation quality. For cases where both the source and the target language have strong formality classes (such as Korean-Japanese), we are also interested in formality class correspondance.
 
 The base translation model we choose for our task an autoregressive transformer model \cite{vaswani2017attention}, which was selected due to its success in machine translation \cite{liu2020deep}. The encoder-decoder construction is significant for us, since the pooled encoder output is going to be the basis for our formality classifier (similar to what we did with the pre-trained Japanese BERT).
+
+\includegraphics{images/baseline.jpg}
 
 Due to the autoregressive nature of our model, in the interest of time saving, we limit the maximum length of each sentence to $15$. Sentences that had a greater length were discarded.
 
@@ -282,7 +286,7 @@ We observe that with an appropriate choice of weights, our model is able to achi
 
 What does the additive formality embedding look like? We take the difference between the learned formal embedding and the learned informal embeddinng, setting the weight distribution to the optimum that we found previously ($.75$ sentence reconstruction loss weight). We graph the difference which is shown as follows:
 
-\includegraphics{formality_embedding.png}
+\includegraphics{images/formality_embedding.png}
 
 It is clear that the learned formality embedding was non-trivial. The difference between the formal and the informal embeddings also appear to be closer for neighbouring positions in the sentence (y-axis), consistent with what our procedural formality classifier does (looking out for the conjugation of the final verb).
 
