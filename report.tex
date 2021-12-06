@@ -197,13 +197,16 @@ We propose a number of different ways to evaluate the translation quality and th
 
 \subsection{Alignment BLEU score}
 
-We use the NLTK toolkit \cite{NLTK} to evaluate the BLEU score of our translations or sentence reconstructions. BLEU score is calculated as the proportion of n-gram overlaps between the hypothesis and the reference; due to only having a single sentence per training data point, such a score is not necessarily a good estimate of the model quality. It also doesn't have a good correlation with sentence formality.
+We use the NLTK toolkit \cite{NLTK} to evaluate the BLEU score \cite{10.3115/1073083.1073135} of our translations or sentence reconstructions. BLEU score is calculated as the proportion of n-gram overlaps between the hypothesis and the reference; due to only having a single sentence per training data point, such a score is not necessarily a good estimate of the model quality. It also doesn't have a good correlation with sentence formality.
 
 \subsection{Alignment RIBES score}
 
-The NLTK toolkit \cite{NLTK} also supports RIBES score. RIBES evaluates similarly to BLEU, but it is more lenient in terms of the ordering of tokens. This is not to say that RIBES doesn't care about the location of different parts of speech at all; it just doesn't punish it as harshly. This is useful for languages like Japanese, where the purposes of phrases in the sentence are determined by the article/tag characters attached to them rather than through order. As such, we looked at RIBES score as well, and as expected, our RIBES scores were generally about 2 times better than corresponding BLEU scores early into training but only a few points better later on. 
+The NLTK toolkit also supports the RIBES score \cite{isozaki-etal-2010-automatic}. RIBES evaluates similarly to BLEU, but it is more lenient in terms of the ordering of tokens. This is not to say that RIBES doesn't care about the location of different parts of speech at all; it just doesn't punish it as harshly. This is useful for languages pairs that are distantly related, such as Japanese-English in our case, where the purposes of phrases in the sentence are determined by the article/tag characters attached to them rather than through order. 
+
+During testing, we found the observed RIBES score to be well-correlated wtih the observed BLEU score for any set of output sentences.
 
 \subsection{Manual, Human Evaluation}
+
 To manually evaluate the translations with human eyes, we randomly sampled 261 (an arbitrary but large enough number) sentences. Among these sentences, we noticed certain patterns in both successful translations and potentially questionable ones. 
 
 The first type of common difficulty was cases where the Japanese sentences omitted some sort of information in the sentence, likely due to it being obvious contextually. Unfortunately for the machine, it is not given this context, so it must sometimes translate incomplete sentences and essentially make an educated guess at certain contexts. Sometimes, it actually manages to do a good job at this, preserving the overall meaning of the phrase. For example: 
@@ -246,7 +249,7 @@ Here we briefly discuss other evaluation metrics that we considered using but wh
 
 \subsubsection{Sentence Embedding Similarity}
 
-Comparing the embedding similarity of two sentences is hardly a trivial problem. In order to make our evaluation task tractable, we use a rather trivial construction where we define the embedding of a sentence as the average embedding of all word embeddings in the sentence. We then define sentence similarity as the dot product between the embedding of the two sentences. 
+One issue that is often raised about the use of BLEU alignment score for evaluating translation quality is its poor correlation with the commonly-used training objectives in machine translation (typically cross-entropy loss). A proposed solution is to use sentence embedding similarity as the evaluation metric \cite{wieting2019bleu}. Such a metric can then be used directly as the training objective.
 
 We observe that, while such an approach would allow for the model to learn directly from the final evaluation metric (since the sentence embedding similarity could be back-propagated), it would additional complexity and thus computation overhead to our existing pipeline due to the need for a sentence embedder. It is also not immediately obvious whether a pre-trained sentence embedding should be used, or whether we should train a separate encoder instead. Finally, sentence embedding similarity has no obvious connection to our ultimate goal: formality-aware translation. As such, we decided against using sentence embedding similarity as our evaluation metric.
 
@@ -390,14 +393,12 @@ We next try applying a learned multiplicative formality embedding on the backwar
 
 We next experiment with different weights for the translation and formality awareness components of the training objective, just as we did with the previous section with sentence reconstructors.
 
-
 \begin{tabular}{ c c c c }
     Back-translation loss weight & Formality reconstruction accuracy & BLEU score & RIBES score \\
     $.9$ & $.337$ & $12.8$ & $19.7$ \\
     $.75$ & $.672$ & $13.6$ & $25.6$ \\
     $.5$ & $.644$ & $14.1$ & $26.6$ \\
-    $.09$ & $0$ & $0$ & $0$ \\
-    $.0099$ & $0$ & $0$ & $0$ \\
+    $.09$ & $.017$ & $10.3$ & $23.2$ \\
 \end{tabular}
 
 \subsubsection{Back Translation with Additive Formality Embedding}
