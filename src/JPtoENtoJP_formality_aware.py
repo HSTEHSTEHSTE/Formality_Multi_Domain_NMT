@@ -30,7 +30,7 @@ device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "
 corpus_file = "data/combined_with_label_simple.txt"
 corpus_file_length = 53357 # simple_balanced # 131687 # simple # 575124 total # 434407 raw # 2823 para # 575124 combined
 out_file = "data/back_translator_formality_aware.txt"
-translation_loss_weight = .1
+translation_loss_weight = 1.
 
 # Build config objects
 #config = TransformerConfig() # default config

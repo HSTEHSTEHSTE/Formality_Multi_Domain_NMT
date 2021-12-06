@@ -201,7 +201,7 @@ We propose a number of different ways to evaluate the translation quality and th
 
 \subsection{Alignment BLEU score}
 
-We use the NLTK toolkit \cite{NLTK} to evaluate the BLEU score \cite{10.3115/1073083.1073135} of our translations or sentence reconstructions. BLEU score is calculated as the proportion of n-gram overlaps between the hypothesis and the reference; due to only having a single sentence per training data point, such a score is not necessarily a good estimate of the model quality. It also doesn't have a good correlation with sentence formality.
+We use the NLTK toolkit \cite{NLTK} to evaluate the BLEU score \cite{10.3115/1073083.1073135} of our translations or sentence reconstructions. BLEU score is calculated as the proportion of n-gram overlaps between the hypothesis and the reference; due to only having a single sentence per training data point, such a score is not necessarily a good estimate of the translation quality. It also doesn't have a good correlation with sentence formality.
 
 \subsection{Alignment RIBES score}
 
@@ -263,9 +263,13 @@ A number of possible architectures could be used to integrate the translation ta
 
 \subsection{Base Translation Model Without Formality Labels}
 
-We first build a base translation model that doesn't take formality into account. We will use its performance as a baseline and attempt to beat its performance with our formality-aware model. For test cases where either the source or the target language doesn't have strong formality classes (such as Japanese-English or vice versa), we are only interested in the translation quality. For cases where both the source and the target language have strong formality classes (such as Korean-Japanese), we are also interested in formality class correspondance.
+We first build a base translation model $g_0: x \rightarrow \hat{y}$, which translates a sentence $x$ from the source language into a sentence $\hat{y}$ from the target language without taking formality into account. We will use its performance as a baseline and attempt to beat its performance with our formality-aware model. For test cases where either the source or the target language doesn't have strong formality classes (such as Japanese-English or vice versa), we are only interested in the translation quality. For cases where both the source and the target language have strong formality classes (such as Korean-Japanese), we are also interested in formality class correspondance.
 
-The base translation model we choose for our task an autoregressive transformer model \cite{vaswani2017attention}, which was selected due to its success in machine translation \cite{liu2020deep}. The encoder-decoder construction is significant for us, since the pooled encoder output is going to be the basis for our formality classifier (similar to what we did with the pre-trained Japanese BERT).
+The base translation model we choose for our task an autoregressive transformer model \cite{vaswani2017attention}, which was selected due to its success in machine translation \cite{liu2020deep}. The encoder-decoder construction is significant for us, since the encoder output is going to be the basis for our formality classifier (similar to what we did with the pre-trained Japanese BERT). The model is training on the minimisation of the cross entropy loss between the output sentence $\hat{y}$ and target output sentence $y$, for each $x, y$ pair from our corpus $Q$, over the target vocabulary $V$:
+
+\begin{equation}
+    min{L} = \sum_{x, y}^Q{\sum^{V}{y_e \log{(\hat{y_e})}}}
+\end{equation}
 
 \includegraphics{images/baseline.jpg}
 
