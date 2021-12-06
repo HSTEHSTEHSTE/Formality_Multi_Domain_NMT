@@ -13,10 +13,7 @@
 \usepackage{graphicx}
 \usepackage{indentfirst}
 \usepackage[dvipsnames]{xcolor}
-\usepackage{xeCJK}
-\setCJKmainfont{IPAMincho}
-\setCJKsansfont{IPAGothic}
-\setCJKmonofont{IPAGothic}
+\usepackage{CJKutf8}
 
 \usepackage{listings}
 
@@ -91,6 +88,8 @@ style=alphabetic,
 
 
 \begin{document}
+\begin{CJK}{UTF8}{min}
+
 \title{Formality-Aware Neural Machine Translation for Japanese-English}
 
 \author{Henry Li Xinyuan, Jerry Chen, Ray Lee}
@@ -156,6 +155,23 @@ Some corpora are already tokenised at sentence level and do not form part of a d
 The procedural classification scripts put each sentence into one of $3$ bins (formal, informal, inconclusive) according to the above-mentioned rules. Note the presence of the "inconclusive" class: these are the sentences that don't contain a formality marker (such as a well-conjugated verb, a copula, or an adjective): in some corpora (such as the subtitles corpus) they account for around one-third of the sentences. We simplify the task for our model by removing all inconclusive sentences and making formality classification a binary-classification task. 
 
 Due to the nature of the corpora that we chose, informal sentences outnumber formal sentences. We therefore randomly drop some informal sentences so that the number of formal and informal sentences are roughly equal.
+
+\paragraph{Examples of Classified Sentences}
+ 
+ .
+
+Informal: 同情してただけなんだ 
+
+In this example, there are multiple kinds of conjugation occuring in the sentence, but the classifier only cares about the conjugation of what it determines as the final verb: だ. だ endings are always short-form, though it might arise from different situations, so it gets classified as informal. \newline
+
+Formal: 別に驚くことではないですよね 
+
+This is an interesting example to pick out because it has more noise at the end. よ and ね are both sentence endings that give nuance to the tone of your statement, but they are not adjectives or verbs, and they do not determine the formality of a sentence. Fortunately, the classifier has no trouble parsing them for what they are, and it ignores them to focus on the final verb です, which is in long form. As such, the sentence is classified at formal.\newline
+
+Inconclusive: 四十六　メチルシクロヘキサノン
+
+This is an example of a technical, loan-word term. It doesn't have an equivalent in Japanese, so it's just sounded out, essentially. There's also no verbs or adjectives in the sentence. As such, the classifier can't find a conjugation to consider, and thus deems it inconclusive.
+
 
 \paragraph{Other languages: Korean}
 
@@ -395,6 +411,9 @@ We add the formality awareness joint training objective to the base backward-tra
 
 We therefore conclude that there is potential for more aggressive formality forcing on the backward-translator, and that formality awareness was not predominantly constrained by translation quality. As such, we decide to apply formality-dependent embeddings on the encoder output, similar to what we did with the sentence reconstructor.
 
+\subsection{Other attempts}
+In addition to back translation, we tried out different ideas for creating a formality tagged English corpus. With such a corpus, we'd be able to see if formality is properly preserved across the translation. For reasons mentioned throughout, however, there's not a definitive way to define formality in English as there is in Japanese or Korean. As such, we tried multiple artificial and intuitive ways of defining our own pseudo-formality. We tried counting unigrams in our existing corpus to determine "formal words", and we tried considering average word length or max word length as a factor to formality as well. In both of these cases, we slightly modified the same classifier we used for Japanese. Instead of considering the Japanese half of the parallel corpus, it considered the English half and categorized based on the factors stated. In the end, with some human evaluation, however, it became clear these methods were simply held back by the fact that they weren't truly correlated to any kind of underlying formality. As such, the translations did not seem to improve over the baseline, even if they technically preserved our pseudo-formality.
+
 \subsubsection{Back Translation with Multiplicative Formality Embedding}
 
 We next try applying a learned multiplicative formality embedding on the backward encoder output before passing it as argument to the backward decoder, hoping that it would allow us to control the decoder to emit sentences according to their original formality. We were able to get a BLEU score of $14.1$, a RIBES score of $26.6$, and a formality awareness of $.644$: while the base translation quality clear regressed, the formality awareness greatly increased, satisfying our objectives.
@@ -408,8 +427,6 @@ We next experiment with different weights for the translation and formality awar
     $.5$ & $.644$ & $14.1$ & $26.6$ \\
     $.09$ & $.017$ & $10.3$ & $23.2$ \\
 \end{tabular}
-
-We find our model to be sensitive to hyper-parameter choice, with performance collapsing when the loss weights deviate from the optimal weight distribution ($.5$). 
 
 \subsubsection{Back Translation with Additive Formality Embedding}
 
@@ -439,4 +456,5 @@ A number of other types of context could be used to improve translation quality.
 
 \newpage
 \printbibliography
+\end{CJK}
 \end{document}
