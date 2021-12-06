@@ -289,7 +289,7 @@ We first build a base translation model $g_0: x \rightarrow \hat{y}$, which tran
 The base translation model we choose for our task an autoregressive transformer model \cite{vaswani2017attention}, which was selected due to its success in machine translation \cite{liu2020deep}. The encoder-decoder construction is significant for us, since the encoder output is going to be the basis for our formality classifier (similar to what we did with the pre-trained Japanese BERT). The model is training on the minimisation of the cross entropy loss between the output sentence $\hat{y}$ and target output sentence $y$, for each $x, y$ pair from our corpus $Q$, over the target vocabulary $V$:
 
 \begin{equation}
-    min{L} = \sum_{x, y}^Q{\sum^{V}{y_e \log{(\hat{y_e})}}}
+    \min{L(g_0)} = \sum_{x, y}^Q{\sum_{e}^{V}{y_e \log{(\hat{y_e})}}}
 \end{equation}
 
 \includegraphics{images/baseline.jpg}
@@ -310,6 +310,12 @@ On our Japanese corpus, we were able to achieve a BLEU score of $79.2$ when benc
 
 We decompose the usual encoder-decoder, using the encoder output as the basis for the formality labelling task. We build a separate classification module which takes encoder output as input and produces a formality label prediction. During training time, the loss function is constructed as a weighted sum of the translation loss (or sentence reconstruction loss) and the formality label loss.
 
+We call our new model $g_1$, which when given an input sentence $x$, returns a sentence - formality label pair $\hat{y}, \hat{z}$, which can be benchmarked against the target sentence - golden label pair $y, z$. The training objective is written as follows:
+
+\begin{equation}
+    \min{L(g_1)} = \sum_{x, y, z}^Q{(z \log{(\hat{z})} + \sum_{e}^{V}{y_e \log{(\hat{y_e})}})}
+\end{equation}
+
 \subsubsection{Autoencoder-Reconstructor plus Classifier}
 
 The choice of the hyper-parameter representing the weight of formality label loss in the total loss was initially chosen to be $.5$. We found that under such a split, the reconstruction performance was somewhat affected ($72.6$ BLEU score, compared to $79.2$ without classification loss). The classification accuracy at $.995$ is extremely good and achieves our objectives completely .
@@ -327,7 +333,7 @@ We adjusted the relative weight between sentence reconstruction loss and formali
 
 \includegraphics{images/encoder_classifier.jpg}
 
-\subsection{Formality Autoencoder - Joint Objective}
+\subsection{Sentence Reconstruction and Formality Awareness - Joint Objective}
 
 Now that we have an encoder and a classifier which can combine to identify formality with a very high accuracy, the next step involves actually generating sentences that are formality-appropriate: ie., the procedural formality classification script would put the generated sentences into the same formality category as it would the corresponding original sentences.
 
@@ -335,7 +341,13 @@ Our training objective is designed as such: we first pre-trained an encoder and 
 
 \includegraphics{images/joint_objective.jpg}
 
-The loss function of this task is composed again of $2$ parts: the sentence reconstruction loss, and the output formality accuracy loss. We first experiment with giving equal weights to the two loss components, and was able to get $71.1$ BLEU score on the sentence reconstruction task.
+The loss function of this task is composed again of $2$ parts: the sentence reconstruction loss, and the output formality accuracy loss. Given a sentence - formality label pair, our model $g_2$ takes an input sentence $x$ and output sentence $\hat{x}$. Recall that $g_1$ was able to generate a formality label $\hat{z}$ given some input sentence, in this case the output sentence $\hat{x}$. We thus write the objective function as:
+
+\begin{equation}
+    \min{L(g_2)} = \sum_{x, z}^Q{(z \log{(g_1(\hat{x}))} + \sum_{e}^{V}{x_e \log{(\hat{x_e})}})}
+\end{equation}
+
+We first experiment with giving equal weights to the two loss components, and was able to get $71.1$ BLEU score on the sentence reconstruction task.
 
 The baseline approach (the decoder that was trained jointly with the encoder-classifier) was able to achieve a $.813$ accuracy on reconstruted sentence formality accuracy, whereas the one trained on the revised objective only achieved a $.763$ accuracy. This is despite the system reporting a confidence of $.923$ about having generated the sentences with the correct formality. As such, we conclude that the joint training scheme was ineffective at assuring translated sentence formality.  
 
