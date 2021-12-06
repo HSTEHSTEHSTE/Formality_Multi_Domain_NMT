@@ -28,9 +28,9 @@ max_sentence_length = 15
 use_gpu = True
 device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
 corpus_file = "data/combined_with_label_simple.txt"
-corpus_file_length = 131687 # simple # 575124 total # 434407 raw # 2823 para # 575124 combined
+corpus_file_length = 53357 # simple_balanced # 131687 # simple # 575124 total # 434407 raw # 2823 para # 575124 combined
 out_file = "data/back_translator_formality_aware.txt"
-translation_loss_weight = 1.
+translation_loss_weight = 9.
 
 # Build config objects
 #config = TransformerConfig() # default config
@@ -74,8 +74,8 @@ encoder = torch.load('encoder_512.pt')
 decoder = torch.load('decoder_en.pt')
 # encoder_back = model.TransformerEncoder(en_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=en_dict.pad(), dropout=.3).to(device=device)
 # decoder_back = model.TransformerDecoder(ja_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=ja_dict.pad(), dropout=.4).to(device=device)
-encoder_back = torch.load('encoder_back_mul.pt')
-decoder_back = torch.load('decoder_back_mul.pt')
+encoder_back = torch.load('encoder_back_add.pt')
+decoder_back = torch.load('decoder_back_add.pt')
 # classifier = model.LinearDecoder(embed_dim * max_sentence_length, 2).to(device=device)
 classifier = torch.load('classifier_512.pt')
 
@@ -244,9 +244,9 @@ for iteration_number in range(0, max_iterations):
             break
 
 # save trained models
-torch.save(encoder_back, 'encoder_back_mul.pt')
-torch.save(decoder_back, 'decoder_back_mul.pt')
-torch.save(formality_mask, 'mask_back_mul.pt')
+torch.save(encoder_back, 'encoder_back_add.pt')
+torch.save(decoder_back, 'decoder_back_add.pt')
+torch.save(formality_mask, 'mask_back_add.pt')
 
 # do one pass over the test corpus
 refs = []

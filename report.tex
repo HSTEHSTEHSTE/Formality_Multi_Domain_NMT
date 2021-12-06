@@ -269,7 +269,7 @@ Instead of applying the learned formality embedding multiplicatively on the enco
     $.99$ & $.818$ & $76.3$ \\
     $.9$ & $.830$ & $77.6$ \\
     $.75$ & $.801$ & $73.9$ \\
-    $.5$ & $.806$ & $.74.8$ \\
+    $.5$ & $.806$ & $74.8$ \\
     $.09$ & $.790$ & $75.7$ \\
     $.0099$ & $.788$ & $76.4$ \\
 \end{tabular}
@@ -313,7 +313,21 @@ We therefore conclude that there is potential for more aggressive formality forc
 
 We next try applying a learned multiplicative formality embedding on the backward encoder output before passing it as argument to the backward decoder, hoping that it would allow us to control the decoder to emit sentences according to their original formality. We were able to get a BLEU score of $14.1$, a RIBES score of $26.6$, and a formality awareness of $.644$: while the base translation quality clear regressed, the formality awareness greatly increased, satisfying our objectives.
 
+We next experiment with different weights for the translation and formality awareness components of the training objective, just as we did with the previous section with sentence reconstructors.
+
+
+\begin{tabular}{ c c c c }
+    Back-translation loss weight & Formality reconstruction accuracy & BLEU score & RIBES score \\
+    $.9$ & $0$ & $0$ & $0$ \\
+    $.75$ & $.672$ & $13.6$ & $25.6$ \\
+    $.5$ & $.644$ & $14.1$ & $26.6$ \\
+    $.09$ & $0$ & $0$ & $0$ \\
+    $.0099$ & $0$ & $0$ & $0$ \\
+\end{tabular}
+
 \subsubsection{Back Translation with Additive Formality Embedding}
+
+Next we experiment with the additive formality embedding scheme, which had yielded superior results for the sentence reconstruction setting. We start of by giving equal weights to back translation loss and formality awareness loss. We measured a BLEU score of $15.8$, a RIBES score of $32.0$, and a formality awareness of $.259$. We observe that while the system's translation quality was relatively unaffected, the formality awareness failed to beat the benchmark of $.382$. We therefore conclude that additive formality embedding is not powerful enough for enforcing formality on the back-translated output.
 
 \section{Evaluation metrics}
 
