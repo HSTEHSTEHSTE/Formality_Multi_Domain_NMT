@@ -91,7 +91,7 @@ style=alphabetic,
 
 
 \begin{document}
-\title{Multi Politeness-Domain Neural Machine Translation for Japanese and Korean}
+\title{Multi Politeness-Domain Neural Machine Translation for Japanese}
 
 \author{Henry Li Xinyuan, Jerry Chen, Ray Lee}
 
@@ -153,15 +153,19 @@ We performed a sanity check on the legal corpus we mentioned earlier (a corpus e
 
 Some corpora are already tokenised at sentence level and do not form part of a document, and we were forced to weaken our common-formality assumption to individual corpus entries (which may contain multiple sentences). 
 
+The procedural classification scripts put each sentence into one of $3$ bins (formal, informal, inconclusive) according to the above-mentioned rules. Note the presence of the "inconclusive" class: these are the sentences that don't contain a formality marker (such as a well-conjugated verb, a copula, or an adjective): in some corpora (such as the subtitles corpus) they account for around one-third of the sentences. We simplify the task for our model by removing all inconclusive sentences and making formality classification a binary-classification task. 
+
+Due to the nature of the corpora that we chose, informal sentences outnumber formal sentences. We therefore randomly drop some informal sentences so that the number of formal and informal sentences are roughly equal.
+
+\paragraph{Other languages: Korean}
+
 One problem that we faced with Japanese-English translation was that Japanese is a language with strong formality and honorifics and English is a language with very weak formality. Thus, we sought to find something similar to Feely et al.'s work, but in Korean. Bravender's open-source application on conjugating Korean verbs proved useful to us.
 
 Bravender's application, koreanverb.app, takes in a Korean verb as an input, and outputs the stem and different conjugations, taking into account tense, formality, and types of statements, such as declarative, imperative, and so on. We believed that this tool would be useful in determining whether the Korean sentences in the corpora we choose to use are formal or informal.
 
 Since Korean is a language that observes SOV order like Japanese, we followed similar steps as we had done previously for analyzing the formality of a given Korean sentence. After tokenizing Korean sentences, we would detect the last verb in the sentence. Then, by using methods from Bravender's application, we would analyze the verb to see whether it was in a formal (or high, in Bravender's code) form or an informal (or low) form.
 
-The procedural classification scripts put each sentence into one of $3$ bins (formal, informal, inconclusive) according to the above-mentioned rules. Note the presence of the "inconclusive" class: these are the sentences that don't contain a formality marker (such as a well-conjugated verb, a copula, or an adjective): in some corpora (such as the subtitles corpus) they account for around one-third of the sentences. We simplify the task for our model by removing all inconclusive sentences and making formality classification a binary-classification task. 
-
-Due to the nature of the corpora that we chose, informal sentences outnumber formal sentences. We therefore randomly drop some informal sentences so that the number of formal and informal sentences are roughly equal.
+We were able to generate a formality-tagged corpus for Korean, similar to the ones we generated for Japanese. Due to time constraints, we weren't able to generalise our systems to Korean.
 
 \subsubsection{Using Pre-trained Japanese Language Model for Politeness Labelling}
 
