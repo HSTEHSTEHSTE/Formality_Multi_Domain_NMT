@@ -245,9 +245,9 @@ Below is a table detailing the results we got with different reconstruct loss we
     $.0099$ & $.760$ & $76.8$ \\
 \end{tabular}
 
-\subsubsection{Multiplicative formality attention}
+\subsubsection{Multiplicative Formality Embedding}
 
-We next experiment with a slightly different setup: applying a multiplicative "formality attention" to the encoder output before passing it to the decoder. For each sentence, depending on the output of the classifier, a different formality attention would be applied. The formality attentions are initialised between $(0, 1)$ randomly, and then learned throughout training. We record the outcome of our experiments here below:
+We next experiment with a slightly different setup: applying a multiplicative "formality embedding" to the encoder output before passing it to the decoder. For each sentence, depending on the output of the classifier, a different formality embedding would be applied. The formality embeddings are initialised between $(0, 1)$ randomly, and then learned throughout training. We record the outcome of our experiments here below:
 
 \begin{tabular}{ c c c c }
     Reconstruction loss weight & Formality reconstruction accuracy & BLEU score \\
@@ -258,11 +258,11 @@ We next experiment with a slightly different setup: applying a multiplicative "f
     $.0099$ & $.775$ & $74.3$ \\
 \end{tabular}
 
-We observe that such an embedding scheme was not effective at helping our reconstruction model be more formality-aware. We next try a slightly different formality attention where the initial values are initialised randomly among ${0, 1}$. We found that such an embedding scheme had a severe impact on BLEU score: with an equal weight between reconstruction loss and formality reconstruction loss, BLEU score was measured at $43.1$. Formality reconstruction accuracy was at $.315$, owing to the failure of the system to produce coherent sentences that could have its formality evaluated. 
+We observe that such an embedding scheme was not effective at helping our reconstruction model be more formality-aware. We next try a slightly different formality embedding where the initial values are initialised randomly among ${0, 1}$. We found that such an embedding scheme had a severe impact on BLEU score: with an equal weight between reconstruction loss and formality reconstruction loss, BLEU score was measured at $43.1$. Formality reconstruction accuracy was at $.315$, owing to the failure of the system to produce coherent sentences that could have its formality evaluated. 
 
-\subsubsection{Additive formality attention}
+\subsubsection{Additive Formality Embedding}
 
-Instead of applying the learned formality attention multiplicatively on the encoder output, an alternative approach is to applyg the learned formality attention additively. 
+Instead of applying the learned formality embedding multiplicatively on the encoder output, an alternative approach is to applyg the learned formality embedding additively. 
 
 \begin{tabular}{ c c c c }
     Reconstruction loss weight & Formality reconstruction accuracy & BLEU score \\
@@ -292,18 +292,24 @@ In order to get around this problem, we built a formality-aware back-translator.
 
 For our base Japanese to English translator-classifier, we use the same model architecture as the one we trained for section $3.1$. We were able to achieve $24.4$ BLEU score (compared to $26.3$ for the baseline translator without classifier), while the formality classification accuracy was $.993$, comparable to the one trained alongside Japanese autoencoders. 
 
-We next build a vanilla backward-translator that was trained solely on the translation objective. 
+We next build a vanilla backward-translator that was trained solely on the translation objective. The baseline back-translator had a BLEU score of $19.1$ and a RIBES score of $27.9$ (pleae refer to section $4$ for details). The back-translated Japanese sentences had a formality awareness of $.269$.
 
 \subsection{Formality-Aware back-translation}
 
-We add the formality awareness joint training objective to the base backward-translator, adding a loss term according to whether the pre-trained encoder-classifier considers the back-translated sentence to have the correct formality. We were able to achieve $18.2$ BLEU score, $29.0$ RIBES score (pleae refer to section $4$ for details), as well as $.236$ formality reconstruction accuracy. As mentioned previously, formality reconstruction accuracy is often upper-bounded by the quality of the translation: a translated sentence that was so malformed that it lacks a formality cue (such as a properly conjugated verb) would obviously fail the formality awareness test. However we note that this is not the case here. We observe the following:
+As is the case with the previous section on sentence reconstructors, there are multiple approaches which can all lead to formality-aware back-translation.
+
+\subsubsection{Formality-Aware Back Translation with Joint Training Objectives}
+
+We add the formality awareness joint training objective to the base backward-translator, adding a loss term according to whether the pre-trained encoder-classifier considers the back-translated sentence to have the correct formality. We were able to achieve $18.2$ BLEU score, $29.0$ RIBES score, as well as $.382$ formality reconstruction accuracy (which beat the benchmark of $.269$). As mentioned previously, formality reconstruction accuracy is often upper-bounded by the quality of the translation: a translated sentence that was so malformed that it lacks a formality cue (such as a properly conjugated verb) would obviously fail the formality awareness test. However we note that this is not the case here. We observe the following:
 
 \begin{enumerate}[label=\arabic*]
     \item The model was relatively unconfident about its formality awareness (the pre-trained encoder-classifier gave a formality accuracy of around $60\%$)
     \item While the back-translation quality was poor, the sentences are generally grammatical and contain a properly-conjugated final verb (as assessed by a human on a random sample of $100$ sentences)
 \end{enumerate}
 
-We therefore conclude that there is potential for more aggressive formality forcing on the backward-translator, and that formality awareness was not predominantly constrained by translation quality.
+We therefore conclude that there is potential for more aggressive formality forcing on the backward-translator, and that formality awareness was not predominantly constrained by translation quality. As such, we decide to apply formality-dependent embeddings on the encoder output, similar to what we did with the sentence reconstructor.
+
+\subsubsection{Back Translation with Multiplicative Formality Embedding}
 
 \section{Evaluation metrics}
 

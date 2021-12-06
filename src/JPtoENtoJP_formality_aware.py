@@ -2,7 +2,6 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 import model
-#from fairseq.models.transformer.transformer_config import TransformerConfig
 from fairseq.data.dictionary import Dictionary
 import os
 import tqdm
@@ -18,8 +17,8 @@ import subprocess
 # Hyper parameters
 batch_size = 64
 dev_batch_size = 64
-max_iterations = 10000
-test_iterations = 100
+max_iterations = 0
+test_iterations = 1000
 initial_learning_rate = .0005
 lr_decay = .5
 lr_threshold = .00001
@@ -30,7 +29,7 @@ use_gpu = True
 device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "cpu")
 corpus_file = "data/combined_with_label_simple.txt"
 corpus_file_length = 131687 # simple # 575124 total # 434407 raw # 2823 para # 575124 combined
-out_file = "data/autoencoder_output_simple.txt"
+out_file = "data/back_translator_formality_aware.txt"
 translation_loss_weight = 1.
 
 # Build config objects
@@ -73,8 +72,10 @@ en_embedding = nn.Embedding(en_dictionary_size, embed_dim, padding_idx=1)
 # Build encoder and decoder objects
 encoder = torch.load('encoder_512.pt')
 decoder = torch.load('decoder_en.pt')
-encoder_back = model.TransformerEncoder(en_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=en_dict.pad(), dropout=.3).to(device=device)
-decoder_back = model.TransformerDecoder(ja_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=ja_dict.pad(), dropout=.4).to(device=device)
+# encoder_back = model.TransformerEncoder(en_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=en_dict.pad(), dropout=.3).to(device=device)
+# decoder_back = model.TransformerDecoder(ja_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=ja_dict.pad(), dropout=.4).to(device=device)
+encoder_back = torch.load('encoder_back.pt')
+decoder_back = torch.load('decoder_back.pt')
 # classifier = model.LinearDecoder(embed_dim * max_sentence_length, 2).to(device=device)
 classifier = torch.load('classifier_512.pt')
 
@@ -229,8 +230,8 @@ for iteration_number in range(0, max_iterations):
             sentence_characters = ja_dict.string(dev_sentence)
             hyps.append(sentence_characters.split())
 
-            print(hyps[index])
-            print(refs[index][0])
+            # print(hyps[index])
+            # print(refs[index][0])
         
         print(nltk.translate.bleu_score.corpus_bleu(refs, hyps, weights=(.34, .33, .33)))
         print(nltk.translate.ribes_score.corpus_ribes(refs, hyps))
@@ -245,7 +246,7 @@ total_test_loss = 0.
 for iteration_number in tqdm.tqdm(range(0, test_iterations), total=test_iterations):
     # load test data
     test_batch_array = test_data_array.sample(n=dev_batch_size)
-    test_sentence_tensors, test_sentence_lengths, test_formality_tensors, test_en_sentence_tensors = extract_tensors(batch_array, refs, ref_labels)
+    test_sentence_tensors, test_sentence_lengths, test_formality_tensors, test_en_sentence_tensors = extract_tensors(test_batch_array, refs, ref_labels)
 
     encoder_back.eval()
     decoder_back.eval()
