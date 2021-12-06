@@ -17,7 +17,7 @@ import subprocess
 # Hyper parameters
 batch_size = 64
 dev_batch_size = 64
-max_iterations = 0
+max_iterations = 10000
 test_iterations = 1000
 initial_learning_rate = .0005
 lr_decay = .5
@@ -30,7 +30,7 @@ device = torch.device("cuda:0" if (torch.cuda.is_available() and use_gpu) else "
 corpus_file = "data/combined_with_label_simple.txt"
 corpus_file_length = 53357 # simple_balanced # 131687 # simple # 575124 total # 434407 raw # 2823 para # 575124 combined
 out_file = "data/back_translator_formality_aware.txt"
-translation_loss_weight = 9.
+translation_loss_weight = .1
 
 # Build config objects
 #config = TransformerConfig() # default config
@@ -72,10 +72,10 @@ en_embedding = nn.Embedding(en_dictionary_size, embed_dim, padding_idx=1)
 # Build encoder and decoder objects
 encoder = torch.load('encoder_512.pt')
 decoder = torch.load('decoder_en.pt')
-# encoder_back = model.TransformerEncoder(en_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=en_dict.pad(), dropout=.3).to(device=device)
-# decoder_back = model.TransformerDecoder(ja_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=ja_dict.pad(), dropout=.4).to(device=device)
-encoder_back = torch.load('encoder_back_add.pt')
-decoder_back = torch.load('decoder_back_add.pt')
+encoder_back = model.TransformerEncoder(en_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=en_dict.pad(), dropout=.3).to(device=device)
+decoder_back = model.TransformerDecoder(ja_dictionary_size, embed_dim, n_layers=1, device=device, pad_index=ja_dict.pad(), dropout=.4).to(device=device)
+# encoder_back = torch.load('encoder_back_add.pt')
+# decoder_back = torch.load('decoder_back_add.pt')
 # classifier = model.LinearDecoder(embed_dim * max_sentence_length, 2).to(device=device)
 classifier = torch.load('classifier_512.pt')
 

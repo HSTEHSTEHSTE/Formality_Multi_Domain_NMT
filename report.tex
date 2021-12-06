@@ -101,6 +101,10 @@ style=alphabetic,
 
 \newpage
 
+\tableofcontents
+
+\newpage
+
 \section{Introduction}
 
 \subsection{Motivation}
@@ -193,7 +197,7 @@ Some other techniques for politeness labelling of Japanese and other languages h
 
 A number of possible architectures could be used to integrate the translation task with the formality labelling task. We implement a number of thems, comparing their performance when their tasks are comparable.
 
-\subsection{Base translation model without formality labels}
+\subsection{Base Translation Model Without Formality Labels}
 
 We first build a base translation model that doesn't take formality into account. We will use its performance as a baseline and attempt to beat its performance with our formality-aware model. For test cases where either the source or the target language doesn't have strong formality classes (such as Japanese-English or vice versa), we are only interested in the translation quality. For cases where both the source and the target language have strong formality classes (such as Korean-Japanese), we are also interested in formality class correspondance.
 
@@ -232,11 +236,13 @@ We adjusted the relative weight between sentence reconstruction loss and formali
     $.0099$ & $.993$ & $54.9$ \\
 \end{tabular}
 
-\subsection{Formality Autoencoder}
+\subsection{Formality Autoencoder - Joint Objective}
 
 Now that we have an encoder and a classifier which can combine to identify formality with a very high accuracy, the next step involves actually generating sentences that are formality-appropriate: ie., the procedural formality classification script would put the generated sentences into the same formality category as it would the corresponding original sentences.
 
 Our training objective is designed as such: we first pre-trained an encoder and a classifier with the autoencoder-classifier. We choose the optimal loss ratio ($.75$ sentence reconstruction loss, $.25$ classifier loss) during pre-training. We then train a formality-aware decoder which generates an output sentence using the output of the pre-trained encoder as input. The generated sentence is then passed through the encoder-classifier again, creating a formality label for the generated sentence.
+
+\includegraphics{images/joint_objective.jpg}
 
 The loss function of this task is composed again of $2$ parts: the sentence reconstruction loss, and the output formality accuracy loss. We first experiment with giving equal weights to the two loss components, and was able to get $71.1$ BLEU score on the sentence reconstruction task.
 
@@ -326,7 +332,7 @@ We next experiment with different weights for the translation and formality awar
 
 \begin{tabular}{ c c c c }
     Back-translation loss weight & Formality reconstruction accuracy & BLEU score & RIBES score \\
-    $.9$ & $0$ & $0$ & $0$ \\
+    $.9$ & $.337$ & $12.8$ & $19.7$ \\
     $.75$ & $.672$ & $13.6$ & $25.6$ \\
     $.5$ & $.644$ & $14.1$ & $26.6$ \\
     $.09$ & $0$ & $0$ & $0$ \\
