@@ -405,6 +405,8 @@ We next experiment with different weights for the translation and formality awar
     $.09$ & $.017$ & $10.3$ & $23.2$ \\
 \end{tabular}
 
+We find our model to be sensitive to hyper-parameter choice, with performance collapsing when the loss weights deviate from the optimal weight distribution ($.5$). 
+
 \subsubsection{Back Translation with Additive Formality Embedding}
 
 Next we experiment with the additive formality embedding scheme, which had yielded superior results for the sentence reconstruction setting. We start of by giving equal weights to back translation loss and formality awareness loss. We measured a BLEU score of $15.8$, a RIBES score of $32.0$, and a formality awareness of $.259$. We observe that while the system's translation quality was relatively unaffected, the formality awareness failed to beat the benchmark of $.382$. We therefore conclude that additive formality embedding is not powerful enough for enforcing formality on the back-translated output.
