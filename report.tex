@@ -398,13 +398,17 @@ We observe that, while such an approach would allow for the model to learn direc
 
 In section $2$ we introduced our procedural formality evaluation, which is grounded in the morphology of the languages that we studied and quite accurate empirically. However, this evaluation method is also discrete and non-differentiable, meaning that it could not be used as the training objective for a neural model. The encoder-classifier setup that we used as the neural formality classification objective does not correlate with our procedural formality classifier well. 
 
+This is one aspect where earlier studies that relied on n-gram counting for formality classification would have an advantage. By applying an F-measure on formality-specific n-gram overlap, we can have a back-propagable metric that correlates with linguistic formality.
+
 \subsection{Can formality encoding be transferred?}
 
-Since our encoders are language-dependent, for formality encoding to be transferrable across languages, we would necessarily need to align our word embeddings across different languages for a transfer learning task to succeed. 
+A non-trivial question arising from our studies is the potential to perform domain adaptation/transfer of our model. Given the simplicity of our classifier, for the classification result from our language-dependent encoders to be transferrable across languages, we would necessarily need to align our word embeddings across different languages for a continual learning/transfer learning task to succeed. This is an area that merits further study.
 
 \subsection{Can our work be generalised to other multi-domain scenarios?}
 
+At a high level, our model can be thought of as explicitly applying a context (a manually extracted hidden state) onto the encoder output, prior to word emission with our decoder. In our case, the context is a representation of the formality of the input sentence.
 
+A number of other types of context could be used to improve translation quality. They could reflect some kind of domain information (emission language, emotion, politeness, etc.). They could also used as a contextual memory, helping the decoder to emit phrases or words that are more appropriate given the recent semantic context or the document context.
 
 \newpage
 \printbibliography
