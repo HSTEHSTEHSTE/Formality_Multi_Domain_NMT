@@ -162,17 +162,19 @@ Due to the nature of the corpora that we chose, informal sentences outnumber for
 
 We examine a number of examples which demonstrate the procedure by which we tag the formality of the sentences in the corpus.
 
-Informal: 同情してただけなんだ 
+\begin{enumerate}[label=\arabic*]
+    \item 同情してただけなんだ: informal
+    
+    In this example, there are multiple kinds of conjugation occuring in the sentence, but the classifier only cares about the conjugation of what it determines as the final verb: だ. だ endings are always short-form, though it might arise from different situations, so it gets classified as informal.
 
-In this example, there are multiple kinds of conjugation occuring in the sentence, but the classifier only cares about the conjugation of what it determines as the final verb: だ. だ endings are always short-form, though it might arise from different situations, so it gets classified as informal.
+    \item 別に驚くことではないですよね: formal
 
-Formal: 別に驚くことではないですよね 
+    This is an interesting example to pick out because it has more noise at the end. よ and ね are both sentence endings that give nuance to the tone of your statement, but they are not adjectives or verbs, and they do not determine the formality of a sentence. Fortunately, the classifier has no trouble parsing them for what they are, and it ignores them to focus on the final verb です, which is in long form. As such, the sentence is classified at formal.
 
-This is an interesting example to pick out because it has more noise at the end. よ and ね are both sentence endings that give nuance to the tone of your statement, but they are not adjectives or verbs, and they do not determine the formality of a sentence. Fortunately, the classifier has no trouble parsing them for what they are, and it ignores them to focus on the final verb です, which is in long form. As such, the sentence is classified at formal.
-
-Inconclusive: 四十六　メチルシクロヘキサノン
-
-This is an example of a technical, loan-word term. It doesn't have an equivalent in Japanese, so it's just sounded out, essentially. There's also no verbs or adjectives in the sentence. As such, the classifier can't find a conjugation to consider, and thus deems it inconclusive.
+    \item 四十六　メチルシクロヘキサノン: inconclusive
+    
+    This is an example of a technical, loan-word term. It doesn't have an equivalent in Japanese, so it's just sounded out, essentially. There's also no verbs or adjectives in the sentence. As such, the classifier can't find a conjugation to consider, and thus deems it inconclusive.
+\end{enumerate}
 
 \paragraph{Other languages: Korean}
 
