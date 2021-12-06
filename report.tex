@@ -234,6 +234,8 @@ We adjusted the relative weight between sentence reconstruction loss and formali
     $.0099$ & $.993$ & $54.9$ \\
 \end{tabular}
 
+\includegraphics{images/encoder_classifier.jpg}
+
 \subsection{Formality Autoencoder - Joint Objective}
 
 Now that we have an encoder and a classifier which can combine to identify formality with a very high accuracy, the next step involves actually generating sentences that are formality-appropriate: ie., the procedural formality classification script would put the generated sentences into the same formality category as it would the corresponding original sentences.
@@ -271,6 +273,8 @@ We next experiment with a slightly different setup: applying a multiplicative "f
 \end{tabular}
 
 We observe that such an embedding scheme was not effective at helping our reconstruction model be more formality-aware. We next try a slightly different formality embedding where the initial values are initialised randomly among ${0, 1}$. We found that such an embedding scheme had a severe impact on BLEU score: with an equal weight between reconstruction loss and formality reconstruction loss, BLEU score was measured at $43.1$. Formality reconstruction accuracy was at $.315$, owing to the failure of the system to produce coherent sentences that could have its formality evaluated. 
+
+\includegraphics{images/arch.jpg}
 
 \subsubsection{Additive Formality Embedding}
 
