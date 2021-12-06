@@ -214,6 +214,8 @@ This setup doesn't even require any fine-tuning, simply deploying existing mask-
 
 Some other techniques for politeness labelling of Japanese and other languages had been proposed, and we will discuss them briefly here. Dugan \cite{Dugan:20} proposed generating politeness labels from the corresponding English translation, an idea we didn't find convincing due to the inherent problems associated with inferring formality from English which has relatively few clear markers for formality, not the mention the problem with noise introduced by otherwise perfect translations with incorrect formality.
 
+On the other hand, having the English sentences annotated with formality would be extremely helpful: it would allow us to have language pairs where both the source and the target language can have their formality evaluated. We experimented with the unigram-counting approach proposed by Pavlick and Tetreault \cite{pavlick-tetreault-2016-empirical}, where formality is scored based on the density of "formal words" in each sentence. Unfortunately, we do not have sufficient data to construct a formality word base with good enough performance.
+
 \section{Evaluation metrics}
 
 We propose a number of different ways to evaluate the translation quality and the sentence reconstruction quality for our different tasks. We analyse the level of correlation between these different metrics on different tasks.
@@ -413,9 +415,6 @@ We add the formality awareness joint training objective to the base backward-tra
 \end{enumerate}
 
 We therefore conclude that there is potential for more aggressive formality forcing on the backward-translator, and that formality awareness was not predominantly constrained by translation quality. As such, we decide to apply formality-dependent embeddings on the encoder output, similar to what we did with the sentence reconstructor.
-
-\subsection{Other attempts}
-In addition to back translation, we tried out different ideas for creating a formality tagged English corpus. With such a corpus, we'd be able to see if formality is properly preserved across the translation. For reasons mentioned throughout, however, there's not a definitive way to define formality in English as there is in Japanese or Korean. As such, we tried multiple artificial and intuitive ways of defining our own pseudo-formality. We tried counting unigrams in our existing corpus to determine "formal words", and we tried considering average word length or max word length as a factor to formality as well. In both of these cases, we slightly modified the same classifier we used for Japanese. Instead of considering the Japanese half of the parallel corpus, it considered the English half and categorized based on the factors stated. In the end, with some human evaluation, however, it became clear these methods were simply held back by the fact that they weren't truly correlated to any kind of underlying formality. As such, the translations did not seem to improve over the baseline, even if they technically preserved our pseudo-formality.
 
 \subsubsection{Back Translation with Multiplicative Formality Embedding}
 
