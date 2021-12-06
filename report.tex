@@ -118,7 +118,7 @@ Formality is almost universal across all languages \cite{article}, and yet there
 In short, we would like our model to be able to perform two additional tasks, on top of translation:
 
 \begin{enumerate}[label=\arabic*]
-    \item Indentify the formality class of the input sentence;
+    \item Identify the formality class of the input sentence;
     \item Emit sentences in the target language with the correct formality class (which is either given as input, or generated automatically according to the input sentence).
 \end{enumerate}
 
@@ -215,7 +215,7 @@ The first type of common difficulty was cases where the Japanese sentences omitt
 
 "Seen five million times."
 
-In this case, the Japanese sentence is missing a subject. "Seen five million times" is a good word-for-word translation, but any Japanese person would understand that there's some object that being seen. Without contextual knowledge, the best way to handle this may be to use a generic pronoun, such as "it," creating the sentence, "it will be seen five million times." In this sentence specifically, the information contained in "will be" is also missing from our translation. Many other translations of this same structure were also missing tense information though, so we suspect that it has something to do with time-determiners like "will" or "has" being treated as attached to a subject; ie. they would be missing should the subject be missing.
+In this case, the Japanese sentence is missing a subject. "Seen five million times" is a good word-for-word translation, but any Japanese person would understand that there is some object that being seen. Without contextual knowledge, the best way to handle this may be to use a generic pronoun, such as "it," creating the sentence, "it will be seen five million times." In this sentence specifically, the information contained in "will be" is also missing from our translation. Many other translations of this same structure were also missing tense information though, so we suspect that it has something to do with time-determiners like "will" or "has" being treated as attached to a subject; ie. they would be missing should the subject be missing.
 
 There are some sentences where the translation loses information, though in many of these cases, the translation in still reasonable and sometimes even more reasonable without context. For example:
 
@@ -223,7 +223,7 @@ There are some sentences where the translation loses information, though in many
 
 "What are you doing Cyrus?"
 
-The translation provided in the parallel corpus is, "what the hell are you doing, Cyrus?" The "the hell" part got left out, but there's no word in the Japanese sentence the means "the hell." That information would entirely be gained from context or tone. As such, this is an interesting case where context-aside, the machine translation might be considered better than what a BLEU or RIBES score might say. Of course, this still speaks to the machine's weakness in situations where it does need to know context.
+The translation provided in the parallel corpus is, "what the hell are you doing, Cyrus?" The "the hell" part got left out, but there is no word in the Japanese sentence the means "the hell." That information would entirely be gained from context or tone. As such, this is an interesting case where context-aside, the machine translation might be considered better than what a BLEU or RIBES score might say. Of course, this still speaks to the machine's weakness in situations where it does need to know context.
 
 Finally, there are some sentences where the translation adds information. These are rare, and it's hard to find a pattern in why it's occurring, as the situations in which it occurs are varied. Often times the additions are conjunctions or articles rather than full on noun or verb phrases. For example: 
 
