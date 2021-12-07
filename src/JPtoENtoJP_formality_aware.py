@@ -18,7 +18,7 @@ import subprocess
 batch_size = 64
 dev_batch_size = 64
 max_iterations = 10000
-test_iterations = 1000
+test_iterations = 100
 initial_learning_rate = .0005
 lr_decay = .5
 lr_threshold = .00001
@@ -81,6 +81,7 @@ classifier = torch.load('classifier_512.pt')
 
 # Formality masks
 formality_mask = torch.rand([2, max_sentence_length, embed_dim]).to(device=device)
+# formality_mask = torch.load('mask_back_add.pt')
 
 # Load data
 data_array = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), corpus_file), header=None, index_col=None, delimiter='\\|\\|').dropna()

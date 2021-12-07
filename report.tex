@@ -364,7 +364,17 @@ Below is a table detailing the results we got with different reconstruct loss we
 
 \subsubsection{Multiplicative Formality Embedding}
 
-We next experiment with a slightly different setup: applying a multiplicative "formality embedding" to the encoder output before passing it to the decoder. For each sentence, depending on the output of the classifier, a different formality embedding would be applied. The formality embeddings are initialised between $(0, 1)$ randomly, and then learned throughout training. We record the outcome of our experiments here below:
+We next experiment with a slightly different setup: applying a multiplicative "formality embedding" to the encoder output before passing it to the decoder. For each sentence, depending on the output of the classifier, a different formality embedding would be applied. The formality embeddings are initialised between $(0, 1)$ randomly, and then learned throughout training. 
+
+Let our model be $g_3$. Recall that our base translator-classifier, $g_1$, takes an input sentence $x$ and outputs a reconstructed sentence $\hat{x}$ and a classified formality $\hat{z}$. We now break $g_1$ into $2$ parts, an encoder $e_1$, a classifier $c_1$, and a decoder $d_1$. We have that $d_1(e_1(x)) = \hat{x}$ and $c_1(e_1(x)) = \hat{z}$.
+
+Now our new model $g_3$ consists of $2$ new components, the formality embedding $f_3$ and the decoder $d_3$. Here we get $\hat{x}$ by $d_3(f_3(e_1(x))) = \hat{x}$. The objective function is the same as fpr the previous task:
+
+\begin{equation}
+    \min{L(g_3)} = \sum_{x, z}^Q{(z \log{(g_1(\hat{x}))} + \sum_{e}^{V}{x_e \log{(\hat{x_e})}})}
+\end{equation}
+
+We record the outcome of our experiments here below:
 
 \begin{tabular}{ c c c c }
     Reconstruction loss weight & Formality reconstruction accuracy & BLEU score \\
@@ -438,7 +448,7 @@ We next experiment with different weights for the translation and formality awar
     Back-translation loss weight & Formality reconstruction accuracy & BLEU score & RIBES score \\
     $.9$ & $.337$ & $12.8$ & $19.7$ \\
     $.75$ & $.672$ & $13.6$ & $25.6$ \\
-    $.5$ & $.644$ & $14.1$ & $26.6$ \\
+    $.5$ & $.644$ & $14.6$ & $29.5$ \\
     $.09$ & $.017$ & $10.3$ & $23.2$ \\
 \end{tabular}
 

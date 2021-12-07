@@ -503,4 +503,5 @@ for n, line in tqdm(enumerate(data_file), total=16000):
         if processed == formality_ref:
             total_accurate += 1
 
+print(total_accurate, total)
 print("Formality accuracy: ", total_accurate / float(total))
