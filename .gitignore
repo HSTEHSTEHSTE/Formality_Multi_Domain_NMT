@@ -136,3 +136,7 @@ dmypy.json
 *.bcf
 *.bbl
 *.blg
+*.toc
+
+# Trained models
+*.pt
